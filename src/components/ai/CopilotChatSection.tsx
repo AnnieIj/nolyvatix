@@ -300,7 +300,7 @@ export const CopilotChatSection: React.FC = () => {
           </div>
 
           <Badge variant="info" className="font-mono text-[11px]">
-            Server-Side @google/genai (gemini-3.6-flash)
+            Server-Side @google/genai (gemini-2.5-flash)
           </Badge>
         </div>
 

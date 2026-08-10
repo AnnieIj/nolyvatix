@@ -71,6 +71,12 @@ export interface AIRecommendationItem {
 export class AiService {
   private aiClient: GoogleGenAI | null = null;
 
+  /**
+   * Single source of truth for the Gemini model id. Configurable via the
+   * GEMINI_MODEL env var; defaults to a currently-valid Flash model.
+   */
+  private readonly model: string = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
   constructor(
     private networkService: NetworkService,
     private ledgerService: LedgerService,
@@ -145,7 +151,7 @@ ${liveContextSummary}
 `;
 
         const response = await this.aiClient.models.generateContent({
-          model: 'gemini-3.6-flash',
+          model: this.model,
           contents: prompt,
           config: {
             systemInstruction,

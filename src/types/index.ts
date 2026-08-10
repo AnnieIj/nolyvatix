@@ -26,7 +26,10 @@ export interface WalletState {
   isConnected: boolean;
   publicKey: string | null;
   name: string | null; // e.g. 'Freighter', 'Albedo'
+  network: string | null; // e.g. 'public', 'testnet'
   balanceXLM: number;
+  connecting: boolean;
+  error: string | null;
 }
 
 export interface NetworkTelemetry {
@@ -172,7 +175,7 @@ export interface WidgetConfig {
   widgetType?: WidgetType;
   metricKey?: string;
   dataKey?: string;
-  gridSpan: 1 | 2 | 3 | 4 | 6 | 12; // columns span out of 12
+  gridSpan: 1 | 2 | 3 | 4 | 6 | 8 | 12; // columns span out of 12
   customSettings?: Record<string, any>;
 }
 

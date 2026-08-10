@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ThemeMode, StellarNetwork, NavRoute, WalletState, NetworkTelemetry } from '../types';
+import { connectWalletProvider, WalletProvider } from '../services/wallet/walletService';
 
 interface AppStore {
   // Theme & Layout
@@ -25,8 +26,9 @@ interface AppStore {
   setActiveRoute: (route: NavRoute) => void;
   setStellarNetwork: (network: StellarNetwork) => void;
   setNetworkTelemetry: (telemetry: NetworkTelemetry) => void;
-  connectMockWallet: (walletName?: string) => void;
+  connectWallet: (provider: WalletProvider) => Promise<void>;
   disconnectWallet: () => void;
+  clearWalletError: () => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -52,7 +54,10 @@ export const useAppStore = create<AppStore>((set) => ({
     isConnected: false,
     publicKey: null,
     name: null,
+    network: null,
     balanceXLM: 0,
+    connecting: false,
+    error: null,
   },
 
   setTheme: (theme) => {
@@ -90,15 +95,27 @@ export const useAppStore = create<AppStore>((set) => ({
   setStellarNetwork: (stellarNetwork) => set({ stellarNetwork }),
   setNetworkTelemetry: (networkTelemetry) => set({ networkTelemetry }),
 
-  connectMockWallet: (walletName = 'Freighter') => {
-    set({
-      wallet: {
-        isConnected: true,
-        publicKey: 'GAAXK902837465102938475610293847561029384756',
-        name: walletName,
-        balanceXLM: 14580.45,
-      },
-    });
+  connectWallet: async (provider) => {
+    set((state) => ({ wallet: { ...state.wallet, connecting: true, error: null } }));
+    try {
+      const connected = await connectWalletProvider(provider);
+      set({
+        wallet: {
+          isConnected: true,
+          publicKey: connected.publicKey,
+          name: connected.name,
+          network: connected.network,
+          balanceXLM: connected.balanceXLM,
+          connecting: false,
+          error: null,
+        },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to connect wallet.';
+      set((state) => ({
+        wallet: { ...state.wallet, isConnected: false, connecting: false, error: message },
+      }));
+    }
   },
 
   disconnectWallet: () => {
@@ -107,8 +124,15 @@ export const useAppStore = create<AppStore>((set) => ({
         isConnected: false,
         publicKey: null,
         name: null,
+        network: null,
         balanceXLM: 0,
+        connecting: false,
+        error: null,
       },
     });
+  },
+
+  clearWalletError: () => {
+    set((state) => ({ wallet: { ...state.wallet, error: null } }));
   },
 }));

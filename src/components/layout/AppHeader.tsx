@@ -18,7 +18,9 @@ import {
   CheckCircle2,
   LogOut,
   ExternalLink,
+  Loader2,
 } from 'lucide-react';
+import type { WalletProvider } from '../../services/wallet/walletService';
 
 export const AppHeader: React.FC = () => {
   const {
@@ -28,14 +30,31 @@ export const AppHeader: React.FC = () => {
     setStellarNetwork,
     networkTelemetry,
     wallet,
-    connectMockWallet,
+    connectWallet,
     disconnectWallet,
+    clearWalletError,
     toggleAICopilot,
     aiCopilotOpen,
   } = useAppStore();
 
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [networkDropdownOpen, setNetworkDropdownOpen] = useState(false);
+  const [connectingProvider, setConnectingProvider] = useState<WalletProvider | null>(null);
+
+  const handleConnect = async (provider: WalletProvider) => {
+    setConnectingProvider(provider);
+    await connectWallet(provider);
+    setConnectingProvider(null);
+    // Close only on a successful connection (no error recorded in the store).
+    if (!useAppStore.getState().wallet.error) {
+      setWalletModalOpen(false);
+    }
+  };
+
+  const openWalletModal = () => {
+    clearWalletError();
+    setWalletModalOpen(true);
+  };
 
   return (
     <>
@@ -125,7 +144,7 @@ export const AppHeader: React.FC = () => {
           {/* Web3 Wallet Status / Connect Button */}
           {wallet.isConnected ? (
             <button
-              onClick={() => setWalletModalOpen(true)}
+              onClick={openWalletModal}
               className="px-3 py-1.5 bg-sky-500/10 border border-sky-500/30 text-sky-300 rounded-md text-xs font-mono font-medium flex items-center gap-2 hover:bg-sky-500/20 transition-colors"
             >
               <Wallet className="w-3.5 h-3.5 text-sky-400" />
@@ -136,7 +155,7 @@ export const AppHeader: React.FC = () => {
               variant="secondary"
               size="sm"
               leftIcon={<Wallet className="w-3.5 h-3.5" />}
-              onClick={() => setWalletModalOpen(true)}
+              onClick={openWalletModal}
             >
               Connect Wallet
             </Button>
@@ -164,8 +183,14 @@ export const AppHeader: React.FC = () => {
                 <span className="text-white font-semibold">{truncateAddress(wallet.publicKey, 6, 6)}</span>
               </div>
               <div className="flex items-center justify-between text-zinc-400">
+                <span>Network</span>
+                <span className="text-white font-semibold capitalize">{wallet.network || 'public'}</span>
+              </div>
+              <div className="flex items-center justify-between text-zinc-400">
                 <span>XLM Balance</span>
-                <span className="text-emerald-400 font-semibold">{wallet.balanceXLM} XLM</span>
+                <span className="text-emerald-400 font-semibold">
+                  {wallet.balanceXLM.toLocaleString(undefined, { maximumFractionDigits: 4 })} XLM
+                </span>
               </div>
             </div>
 
@@ -186,13 +211,18 @@ export const AppHeader: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3 font-mono">
-            <p className="text-xs text-zinc-400 mb-2">Select your Stellar browser extension wallet:</p>
+            <p className="text-xs text-zinc-400 mb-2">Select your Stellar wallet to authenticate:</p>
+
+            {wallet.error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-[11px] text-red-300 leading-relaxed">
+                {wallet.error}
+              </div>
+            )}
+
             <button
-              onClick={() => {
-                connectMockWallet('Freighter');
-                setWalletModalOpen(false);
-              }}
-              className="w-full p-3 bg-zinc-900 border border-zinc-800 hover:border-sky-500/50 rounded-lg flex items-center justify-between text-xs text-white hover:bg-zinc-850 transition-all"
+              onClick={() => handleConnect('Freighter')}
+              disabled={wallet.connecting}
+              className="w-full p-3 bg-zinc-900 border border-zinc-800 hover:border-sky-500/50 rounded-lg flex items-center justify-between text-xs text-white hover:bg-zinc-850 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
@@ -200,15 +230,17 @@ export const AppHeader: React.FC = () => {
                 </div>
                 <span>Freighter Wallet</span>
               </div>
-              <Badge variant="success">Recommended</Badge>
+              {wallet.connecting && connectingProvider === 'Freighter' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400" />
+              ) : (
+                <Badge variant="success">Recommended</Badge>
+              )}
             </button>
 
             <button
-              onClick={() => {
-                connectMockWallet('Albedo');
-                setWalletModalOpen(false);
-              }}
-              className="w-full p-3 bg-zinc-900 border border-zinc-800 hover:border-sky-500/50 rounded-lg flex items-center justify-between text-xs text-white hover:bg-zinc-850 transition-all"
+              onClick={() => handleConnect('Albedo')}
+              disabled={wallet.connecting}
+              className="w-full p-3 bg-zinc-900 border border-zinc-800 hover:border-sky-500/50 rounded-lg flex items-center justify-between text-xs text-white hover:bg-zinc-850 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold">
@@ -216,7 +248,11 @@ export const AppHeader: React.FC = () => {
                 </div>
                 <span>Albedo Link</span>
               </div>
-              <span className="text-zinc-500 text-[10px]">Web Auth</span>
+              {wallet.connecting && connectingProvider === 'Albedo' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400" />
+              ) : (
+                <span className="text-zinc-500 text-[10px]">Web Auth</span>
+              )}
             </button>
           </div>
         )}

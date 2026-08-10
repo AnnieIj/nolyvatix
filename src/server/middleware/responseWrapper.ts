@@ -47,6 +47,52 @@ export function createErrorResponse(code: string, message: string, details?: unk
   };
 }
 
+/**
+ * Maps a numeric HTTP status code to a stable machine-readable error code.
+ */
+function statusToErrorCode(status: number): string {
+  switch (status) {
+    case 400:
+      return 'BAD_REQUEST';
+    case 401:
+      return 'UNAUTHORIZED';
+    case 403:
+      return 'FORBIDDEN';
+    case 404:
+      return 'NOT_FOUND';
+    case 409:
+      return 'CONFLICT';
+    case 422:
+      return 'UNPROCESSABLE_ENTITY';
+    case 429:
+      return 'RATE_LIMITED';
+    default:
+      return status >= 500 ? 'INTERNAL_SERVER_ERROR' : 'ERROR';
+  }
+}
+
+/**
+ * Canonical success responder. Wraps `createSuccessResponse` and writes the
+ * given HTTP status (defaults to 200). Used by all Express route handlers.
+ */
+export function sendSuccess<T>(res: Response, data: T, status = 200): void {
+  res.status(status).json(createSuccessResponse(data));
+}
+
+/**
+ * Canonical error responder. Wraps `createErrorResponse` and writes the given
+ * HTTP status (defaults to 400) with a derived machine-readable error code.
+ */
+export function sendError(
+  res: Response,
+  message: string,
+  status = 400,
+  details?: unknown,
+  code?: string
+): void {
+  res.status(status).json(createErrorResponse(code ?? statusToErrorCode(status), message, details));
+}
+
 export function globalErrorHandler(
   err: Error,
   _req: Request,
