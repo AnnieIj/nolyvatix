@@ -8,9 +8,13 @@ interface AppStore {
   aiCopilotOpen: boolean;
   activeRoute: NavRoute;
 
-  // Blockchain Environment
+  // Blockchain Environment & Service Health
   stellarNetwork: StellarNetwork;
   networkTelemetry: NetworkTelemetry;
+
+  // Fallback / Mock Data Mode
+  isFallbackMode: boolean;
+  fallbackReason: string | null;
 
   // Web3 Wallet State
   wallet: WalletState;
@@ -25,6 +29,7 @@ interface AppStore {
   setActiveRoute: (route: NavRoute) => void;
   setStellarNetwork: (network: StellarNetwork) => void;
   setNetworkTelemetry: (telemetry: NetworkTelemetry) => void;
+  setFallbackMode: (isFallback: boolean, reason?: string) => void;
   connectMockWallet: (walletName?: string) => void;
   disconnectWallet: () => void;
 }
@@ -47,6 +52,9 @@ export const useAppStore = create<AppStore>((set) => ({
     activeAccounts24h: 42150,
     lastUpdated: new Date().toISOString(),
   },
+
+  isFallbackMode: false,
+  fallbackReason: null,
 
   wallet: {
     isConnected: false,
@@ -89,6 +97,18 @@ export const useAppStore = create<AppStore>((set) => ({
   setActiveRoute: (activeRoute) => set({ activeRoute }),
   setStellarNetwork: (stellarNetwork) => set({ stellarNetwork }),
   setNetworkTelemetry: (networkTelemetry) => set({ networkTelemetry }),
+
+  setFallbackMode: (isFallback, reason) =>
+    set((state) => {
+      // Only trigger state update if value changed to avoid re-render loops
+      if (state.isFallbackMode === isFallback && state.fallbackReason === (reason || null)) {
+        return state;
+      }
+      return {
+        isFallbackMode: isFallback,
+        fallbackReason: isFallback ? reason || 'Live backend services are unavailable. Displaying cached fallback data.' : null,
+      };
+    }),
 
   connectMockWallet: (walletName = 'Freighter') => {
     set({

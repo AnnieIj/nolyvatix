@@ -21,7 +21,7 @@ interface ExecutiveKpiGridProps {
   isLoading?: boolean;
 }
 
-export const ExecutiveKpiGrid: React.FC<ExecutiveKpiGridProps> = ({
+export const ExecutiveKpiGrid: React.FC<ExecutiveKpiGridProps> = React.memo(({
   health,
   assetSummary,
   poolsCount = 348,
@@ -51,7 +51,6 @@ export const ExecutiveKpiGrid: React.FC<ExecutiveKpiGridProps> = ({
   const opsPerSec = (tpsVal * 4.2).toFixed(1);
   const totalAssets = assetSummary?.totalAssetsCount ? formatCompactNumber(assetSummary.totalAssetsCount) : '1.28K';
   const networkStatus = health?.status?.toUpperCase() || 'HEALTHY';
-  const protocolVer = health?.protocolVersion ? `v${health.protocolVersion}` : 'v21';
 
   const isHealthy = health?.status === 'healthy';
   const statusVariant = health?.status === 'healthy' ? 'success' : health?.status === 'degraded' ? 'warning' : 'error';
@@ -155,4 +154,6 @@ export const ExecutiveKpiGrid: React.FC<ExecutiveKpiGridProps> = ({
       />
     </motion.div>
   );
-};
+});
+
+ExecutiveKpiGrid.displayName = 'ExecutiveKpiGrid';

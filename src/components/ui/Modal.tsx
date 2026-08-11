@@ -63,6 +63,10 @@ export const Modal: React.FC<ModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? 'modal-title' : undefined}
+            aria-describedby={subtitle ? 'modal-subtitle' : undefined}
             className={cn(
               'relative w-full glass-card border border-zinc-700/80 rounded-xl shadow-2xl overflow-hidden z-10 text-zinc-100',
               maxWidths[effectiveWidth],
@@ -72,12 +76,13 @@ export const Modal: React.FC<ModalProps> = ({
             {title && (
               <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-semibold text-white">{title}</h3>
-                  {subtitle && <p className="text-xs text-zinc-400 mt-0.5">{subtitle}</p>}
+                  <h3 id="modal-title" className="text-base font-semibold text-white">{title}</h3>
+                  {subtitle && <p id="modal-subtitle" className="text-xs text-zinc-400 mt-0.5">{subtitle}</p>}
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
+                  aria-label="Close modal dialog"
+                  className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                 >
                   <X className="w-4 h-4" />
                 </button>

@@ -8,8 +8,17 @@ import { X, Sparkles, Send, Bot, User, BarChart2, RefreshCw, Trash2, Copy, Check
 import { motion, AnimatePresence } from 'motion/react';
 import { LineChart as ReLineChart, Line, BarChart as ReBarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
+const SAMPLE_PROMPTS = [
+  'Show USDC anchor corridor 30-day volume',
+  'What is the WASM gas usage for Soroban contracts?',
+  'Summarize Stellar ledger TPS and network health',
+  'Compare USDC and EURC liquidity',
+];
+
 export const GeminiAICopilotDrawer: React.FC = () => {
-  const { aiCopilotOpen, toggleAICopilot } = useAppStore();
+  const aiCopilotOpen = useAppStore((s) => s.aiCopilotOpen);
+  const toggleAICopilot = useAppStore((s) => s.toggleAICopilot);
+
   const [messages, setMessages] = useState<AIChatMessage[]>([
     {
       id: 'welcome-msg',
@@ -95,13 +104,6 @@ export const GeminiAICopilotDrawer: React.FC = () => {
     ]);
   };
 
-  const samplePrompts = [
-    'Show USDC anchor corridor 30-day volume',
-    'What is the WASM gas usage for Soroban contracts?',
-    'Summarize Stellar ledger TPS and network health',
-    'Compare USDC and EURC liquidity',
-  ];
-
   return (
     <AnimatePresence>
       {aiCopilotOpen && (
@@ -110,17 +112,22 @@ export const GeminiAICopilotDrawer: React.FC = () => {
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          id="ai-copilot-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Gemini AI Co-Pilot assistant"
+          aria-labelledby="ai-copilot-title"
           className="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] bg-zinc-950/95 border-l border-zinc-800 backdrop-blur-2xl z-50 flex flex-col shadow-2xl text-zinc-100"
         >
           {/* Header */}
           <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-400">
+              <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-400" aria-hidden="true">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-white">Gemini AI Co-Pilot</h3>
+                  <h3 id="ai-copilot-title" className="text-sm font-bold text-white">Gemini AI Co-Pilot</h3>
                   <Badge variant="info">Gemini 3.6</Badge>
                 </div>
                 <p className="text-[11px] text-zinc-400 font-mono">Press Alt+A or Cmd+K to toggle</p>
@@ -130,29 +137,37 @@ export const GeminiAICopilotDrawer: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={clearMessages}
+                aria-label="Clear chat history"
                 title="Clear Chat"
-                className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded-md transition-colors"
+                className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" aria-hidden="true" />
               </button>
               <button
                 onClick={toggleAICopilot}
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
+                aria-label="Close Gemini AI Co-Pilot assistant"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           </div>
 
           {/* Chat Messages Body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div
+            role="log"
+            aria-live="polite"
+            aria-label="AI Co-Pilot conversation"
+            aria-atomic="false"
+            className="flex-1 overflow-y-auto p-4 space-y-4"
+          >
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.sender === 'gemini' && (
-                  <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-500/30 text-sky-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <div aria-hidden="true" className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-500/30 text-sky-400 flex items-center justify-center shrink-0 mt-0.5">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
@@ -173,12 +188,14 @@ export const GeminiAICopilotDrawer: React.FC = () => {
                       {msg.sender === 'gemini' && (
                         <button
                           onClick={() => copyText(msg.text, msg.id)}
-                          className="hover:text-white transition-colors"
+                          aria-label={copiedId === msg.id ? 'Message copied to clipboard' : 'Copy message to clipboard'}
+                          aria-pressed={copiedId === msg.id}
+                          className="hover:text-white transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-500 rounded"
                         >
                           {copiedId === msg.id ? (
-                            <Check className="w-3 h-3 text-emerald-400" />
+                            <Check className="w-3 h-3 text-emerald-400" aria-hidden="true" />
                           ) : (
-                            <Copy className="w-3 h-3" />
+                            <Copy className="w-3 h-3" aria-hidden="true" />
                           )}
                         </button>
                       )}
@@ -236,7 +253,7 @@ export const GeminiAICopilotDrawer: React.FC = () => {
                 </div>
 
                 {msg.sender === 'user' && (
-                  <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 flex items-center justify-center shrink-0 mt-0.5">
+                  <div aria-hidden="true" className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-300 flex items-center justify-center shrink-0 mt-0.5">
                     <User className="w-4 h-4" />
                   </div>
                 )}
@@ -259,12 +276,13 @@ export const GeminiAICopilotDrawer: React.FC = () => {
 
           {/* Quick Prompts & Input Bar */}
           <div className="p-3 border-t border-zinc-800 bg-zinc-900/90 space-y-2">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-              {samplePrompts.map((p, i) => (
+            <div role="group" aria-label="Quick prompt suggestions" className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {SAMPLE_PROMPTS.map((p, i) => (
                 <button
                   key={i}
                   onClick={() => handleSend(p)}
-                  className="px-2 py-1 bg-zinc-950 border border-zinc-800 hover:border-sky-500/50 rounded text-[10px] font-mono text-zinc-400 hover:text-sky-300 whitespace-nowrap transition-colors shrink-0"
+                  aria-label={`Quick prompt: ${p}`}
+                  className="px-2 py-1 bg-zinc-950 border border-zinc-800 hover:border-sky-500/50 rounded text-[10px] font-mono text-zinc-400 hover:text-sky-300 whitespace-nowrap transition-colors shrink-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-500"
                 >
                   {p}
                 </button>
@@ -272,22 +290,26 @@ export const GeminiAICopilotDrawer: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              <label htmlFor="ai-copilot-input-prompt" className="sr-only">Ask Gemini a question about the Stellar blockchain</label>
               <input
+                id="ai-copilot-input-prompt"
                 type="text"
                 value={inputPrompt}
                 onChange={(e) => setInputPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Ask Gemini natural questions..."
-                className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-xs text-white placeholder:text-zinc-500 font-mono focus:outline-none focus:border-sky-500"
+                aria-label="Ask Gemini a question about the Stellar blockchain"
+                className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-xs text-white placeholder:text-zinc-500 font-mono focus:outline-none focus:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500"
               />
               <Button
                 variant="primary"
                 size="sm"
                 isLoading={isLoading}
                 onClick={() => handleSend()}
+                aria-label={isLoading ? 'Sending message...' : 'Send message to Gemini AI'}
                 className="shrink-0"
               >
-                <Send className="w-3.5 h-3.5" />
+                <Send className="w-3.5 h-3.5" aria-hidden="true" />
               </Button>
             </div>
           </div>
