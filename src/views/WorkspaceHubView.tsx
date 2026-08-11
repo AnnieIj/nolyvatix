@@ -31,7 +31,7 @@ export const WorkspaceHubView: React.FC = () => {
       const res = await fetch('/api/workspaces/active');
       if (res.ok) {
         const json = await res.json();
-        setWorkspace(json.data);
+        setWorkspace(json.data?.workspace || json.data);
       }
     } catch (err) {
       console.error('Failed to fetch workspace:', err);
@@ -48,7 +48,7 @@ export const WorkspaceHubView: React.FC = () => {
       });
       if (res.ok) {
         const json = await res.json();
-        setWorkspace(json.data);
+        setWorkspace(json.data?.workspace || json.data);
       }
     } catch (err) {
       console.error('Failed to toggle pin:', err);
