@@ -35,11 +35,11 @@ Stellar ecosystem developers, liquidity providers, and network operators often n
 
 ## 🏛️ Architecture
 
-Nolyvatix operates as a single-process full-stack node application:
+Nolyvatix operates as a single-process full-stack Node.js application:
 
 - **Frontend**: Single-page application built with React 19, Zustand for client state management, and Tailwind CSS v4 for styling.
 - **Backend & Data Engine**: Express.js server providing API route handlers, in-memory caching (`MemoryCache`), and clients for external communication.
-- **Blockchain Integrations**: Custom `HorizonClient` and `SorobanClient` issuing HTTP REST and JSON-RPC 2.0 requests directly to Stellar Horizon nodes and Soroban RPC endpoints.
+- **Blockchain Integrations**: Custom `HorizonClient` and `SorobanClient` issuing HTTP REST and JSON-RPC 2.0 requests directly to Stellar Horizon nodes and Soroban RPC endpoints using native HTTP fetch operations.
 - **AI Integration**: Server-side `AiService` interacting with the Google Gemini API using `@google/genai`.
 
 ```mermaid
@@ -93,14 +93,14 @@ Copy `.env.example` to `.env` and configure the required variables:
 
 | Variable | Description | Required | Default / Example |
 | :--- | :--- | :---: | :--- |
-| `GEMINI_API_KEY` | Google Gemini API key for AI Copilot features | Optional | `YOUR_GEMINI_API_KEY` |
-| `APP_URL` | Base host URL of the deployed application | Optional | `http://localhost:3000` |
-| `VITE_APP_TITLE` | Application branding title | Optional | `Nolyvatix - Stellar Blockchain BI Platform` |
+| `GEMINI_API_KEY` | API key for Google Gemini AI Copilot features | Optional | `YOUR_GEMINI_API_KEY` |
+| `APP_URL` | Base hosting URL of the application | Optional | `http://localhost:3000` |
+| `VITE_APP_TITLE` | Application title badge in the UI header | Optional | `Nolyvatix - Stellar Blockchain BI Platform` |
 | `VITE_STELLAR_NETWORK` | Stellar network target (`mainnet`, `testnet`, `futurenet`) | Optional | `mainnet` |
-| `VITE_HORIZON_URL` | Stellar Horizon REST endpoint | Optional | `https://horizon.stellar.org` |
-| `VITE_SOROBAN_RPC_URL` | Soroban JSON-RPC 2.0 endpoint | Optional | `https://soroban-rpc.mainnet.stellar.org` |
-| `VITE_ENABLE_MOCK_DATA` | Toggle mock telemetry fallback | Optional | `false` |
-| `VITE_ENABLE_AI_COPILOT` | Toggle AI Copilot features in the UI | Optional | `true` |
+| `VITE_HORIZON_URL` | Stellar Horizon REST API base URL | Optional | `https://horizon.stellar.org` |
+| `VITE_SOROBAN_RPC_URL` | Soroban JSON-RPC 2.0 endpoint URL | Optional | `https://soroban-rpc.mainnet.stellar.org` |
+| `VITE_ENABLE_MOCK_DATA` | Toggle mock telemetry fallback (`true`/`false`) | Optional | `false` |
+| `VITE_ENABLE_AI_COPILOT` | Toggle AI Copilot features in the UI (`true`/`false`) | Optional | `true` |
 
 ---
 
@@ -207,7 +207,7 @@ Detailed instructions for running Nolyvatix in staging and production environmen
 
 ## 🗺️ Roadmap
 
-### Implemented (v1.0.0)
+### Current Features
 - Real-time Command Center with live ledger monitoring and network switcher.
 - Drag-and-drop Dashboard Builder with layout persistence and custom KPI widgets.
 - BI Reporting Engine supporting executive digest generation and multi-format exports.
@@ -215,7 +215,7 @@ Detailed instructions for running Nolyvatix in staging and production environmen
 - Universal Search Engine and Multi-Workspace Collaboration Hub.
 - Gemini AI Copilot for natural language telemetry queries and contract gas profiling.
 
-### Planned
+### Planned Features
 - PostgreSQL & Redis persistent database storage adapters.
 - Kubernetes Helm chart deployment definitions.
 - Interactive OpenAPI / Swagger UI documentation at `/api/docs`.
