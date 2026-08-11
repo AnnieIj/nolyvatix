@@ -2,9 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Build-Passing-emerald)](https://github.com/AnnieIj/nolyvatix)
-[![Tests](https://img.shields.io/badge/Tests-46%2F46%20Passing-brightgreen)](https://github.com/AnnieIj/nolyvatix)
+[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen)](https://github.com/AnnieIj/nolyvatix)
 [![React](https://img.shields.io/badge/React-19.0-sky)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.0-blue)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4.0-38bdf8)](https://tailwindcss.com/)
 [![Stellar](https://img.shields.io/badge/Stellar-Horizon%20%2F%20Soroban-007afe)](https://stellar.org/)
 
@@ -22,38 +22,45 @@ Stellar ecosystem developers, liquidity providers, and network operators often n
 
 ## ✨ Key Features
 
-- **Real-Time Command Center**: Live ledger sequence listener, throughput (TPS) tracking, block close speeds, fee pool monitoring, and instant Mainnet/Testnet environment switching.
-- **Enterprise Dashboard Builder**: Drag-and-drop 12-column grid workspace supporting custom KPI cards, time-series charts, workspace duplication, layout persistence, and entity pinning.
-- **BI Reporting Engine**: Automated executive, technical, and compliance report generation with package exports in `JSON`, `CSV`, and `Markdown`.
-- **Alert & Webhook Center**: Rule-based notification triggers (TPS drops, whale transfers >1M XLM, DEX volume surges, Soroban WASM contract errors) dispatched via Webhooks, Email, Slack, Discord, and Browser alerts.
-- **Universal Search Intelligence**: Fast search matching Stellar public keys (`G...`), Soroban contracts (`C...`), transaction hashes, ledgers, assets, AMM liquidity pools, dashboards, and reports.
-- **Multi-Workspace Hub & Collaboration**: Role-based access control (`owner`, `editor`, `viewer`), tokenized read-only share links, and bookmarked entity collections.
-- **Unified Export Center**: Package Exporter supporting PDF, CSV, JSON, Markdown, PNG, and SVG vector chart downloads.
-- **Gemini AI Copilot**: Natural language query engine powered by Google Gemini AI (`@google/genai`) for plain-English network telemetry queries, contract profiling, and automated chart generation.
+- **Real-Time Command Center**: Live ledger sequence tracking, throughput (TPS) monitoring, block close speeds, fee pool metrics, and environment switching between Stellar Mainnet and Testnet.
+- **Enterprise Dashboard Builder**: Drag-and-drop 12-column grid workspace supporting custom KPI cards, time-series charts, layout persistence, widget duplication, and entity pinning.
+- **BI Reporting Engine**: Automated executive, technical, and compliance report generation with exports in `JSON`, `CSV`, and `Markdown` packages.
+- **Alert & Webhook Center**: Rule-based notification triggers (TPS drops, whale transfers >1M XLM, DEX volume surges, Soroban contract errors) dispatched via Webhooks, Email, Slack, Discord, and Browser notifications.
+- **Universal Search Intelligence**: Query Stellar public keys (`G...`), Soroban contract IDs (`C...`), transaction hashes, ledger sequences, assets, AMM liquidity pools, dashboards, reports, and alert rules.
+- **Multi-Workspace Hub & Collaboration**: Workspace creation and management with role-based permissions (`owner`, `editor`, `viewer`), tokenized read-only share URLs, and entity bookmarking.
+- **Unified Export Center**: Multi-format exporter supporting PDF, CSV, JSON, Markdown, PNG, and SVG chart downloads.
+- **Gemini AI Copilot**: Natural language query engine powered by Google Gemini AI (`@google/genai`) for network telemetry insights, contract execution profiling, and automated chart generation.
 
 ---
 
 ## 🏛️ Architecture
 
+Nolyvatix operates as a single-process full-stack node application:
+
+- **Frontend**: Single-page application built with React 19, Zustand for client state management, and Tailwind CSS v4 for styling.
+- **Backend & Data Engine**: Express.js server providing API route handlers, in-memory caching (`MemoryCache`), and clients for external communication.
+- **Blockchain Integrations**: Custom `HorizonClient` and `SorobanClient` issuing HTTP REST and JSON-RPC 2.0 requests directly to Stellar Horizon nodes and Soroban RPC endpoints.
+- **AI Integration**: Server-side `AiService` interacting with the Google Gemini API using `@google/genai`.
+
 ```mermaid
 flowchart TD
     subgraph Client["Browser Frontend (React 19)"]
         UI["Command Center & Dashboard Builder"]
-        Store["Zustand Store & Router Layer"]
+        Store["Zustand Store & React Query"]
         UI --> Store
     end
 
-    subgraph Backend["Express Backend & Data Engine Container"]
-        API["HTTP API Routers (/api)"]
-        Cache["In-Memory Cache & Middleware"]
-        Clients["Horizon & Soroban RPC Clients"]
+    subgraph Backend["Express Backend & Data Engine"]
+        API["API Routers (/api)"]
+        Cache["MemoryCache & Middleware"]
+        Clients["Horizon & Soroban HTTP Clients"]
         API --> Cache
         API --> Clients
     end
 
-    subgraph External["External Network Services"]
-        Horizon["Stellar Horizon REST Nodes"]
-        Soroban["Soroban JSON-RPC"]
+    subgraph External["External Services"]
+        Horizon["Stellar Horizon REST API"]
+        Soroban["Soroban JSON-RPC Node"]
         Gemini["Google Gemini AI API"]
     end
 
@@ -67,49 +74,37 @@ flowchart TD
 
 ## 🖼️ Screenshots
 
-> _Placeholders: UI screenshots demonstrating the Command Center, Dashboard Builder, and Gemini AI Copilot will be added in upcoming releases._
-
-| Command Center Telemetry | Drag-and-Drop Dashboard Builder |
-| :---: | :---: |
-| ![Command Center Dashboard](https://via.placeholder.com/600x340?text=Command+Center+Telemetry) | ![Dashboard Builder Workspace](https://via.placeholder.com/600x340?text=Dashboard+Builder+Workspace) |
-
-| Gemini AI Copilot Chat | Alert & Webhook Center |
-| :---: | :---: |
-| ![Gemini AI Copilot Interface](https://via.placeholder.com/600x340?text=Gemini+AI+Copilot) | ![Alert Center Configuration](https://via.placeholder.com/600x340?text=Alert+Center+Configuration) |
+> Screenshots and product demonstrations will be added as the project evolves.
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React 19, TypeScript 5.7, Tailwind CSS v4, Zustand, Lucide React, Recharts
-- **Backend Engine**: Node.js v20+, Express.js, `@google/genai` (Gemini AI SDK)
-- **Blockchain Integration**: `@stellar/stellar-sdk` (Horizon REST & Soroban JSON-RPC)
-- **Testing & Tooling**: Node.js Native Test Runner (`node:test`), Vite, esbuild, TypeScript
+- **Frontend**: React 19, TypeScript 7, Tailwind CSS v4, Zustand 5, Lucide React, Recharts 3, Motion 12, TanStack React Query 5
+- **Backend Engine**: Node.js (>=20.0.0), Express.js 4, `@google/genai` (Gemini AI SDK)
+- **Blockchain Protocol**: Direct REST (`HorizonClient`) and JSON-RPC 2.0 (`SorobanClient`) HTTP clients for Stellar and Soroban
+- **Build & Development**: Vite 6, esbuild, `tsx`, Node.js native test runner
 
 ---
 
 ## ⚙️ Environment Variables
 
-Create a `.env` file in the root directory based on `.env.example`:
+Copy `.env.example` to `.env` and configure the required variables:
 
-```env
-# Required for Gemini AI Copilot
-GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
-
-# Platform & Network Preferences
-APP_URL="http://localhost:3000"
-VITE_STELLAR_NETWORK="mainnet"
-VITE_HORIZON_URL="https://horizon.stellar.org"
-VITE_SOROBAN_RPC_URL="https://mainnet.soroban.stellar.org"
-
-# Feature Flags
-VITE_ENABLE_MOCK_DATA="false"
-VITE_ENABLE_AI_COPILOT="true"
-```
+| Variable | Description | Required | Default / Example |
+| :--- | :--- | :---: | :--- |
+| `GEMINI_API_KEY` | Google Gemini API key for AI Copilot features | Optional | `YOUR_GEMINI_API_KEY` |
+| `APP_URL` | Base host URL of the deployed application | Optional | `http://localhost:3000` |
+| `VITE_APP_TITLE` | Application branding title | Optional | `Nolyvatix - Stellar Blockchain BI Platform` |
+| `VITE_STELLAR_NETWORK` | Stellar network target (`mainnet`, `testnet`, `futurenet`) | Optional | `mainnet` |
+| `VITE_HORIZON_URL` | Stellar Horizon REST endpoint | Optional | `https://horizon.stellar.org` |
+| `VITE_SOROBAN_RPC_URL` | Soroban JSON-RPC 2.0 endpoint | Optional | `https://soroban-rpc.mainnet.stellar.org` |
+| `VITE_ENABLE_MOCK_DATA` | Toggle mock telemetry fallback | Optional | `false` |
+| `VITE_ENABLE_AI_COPILOT` | Toggle AI Copilot features in the UI | Optional | `true` |
 
 ---
 
-## 📥 Installation
+## 📥 Installation & Setup
 
 1. **Clone the repository**:
    ```bash
@@ -122,7 +117,7 @@ VITE_ENABLE_AI_COPILOT="true"
    npm install
    ```
 
-3. **Set up environment variables**:
+3. **Configure environment variables**:
    ```bash
    cp .env.example .env
    ```
@@ -132,14 +127,14 @@ VITE_ENABLE_AI_COPILOT="true"
 ## 🚀 Running the Project
 
 ### Development Mode
-Start the full-stack Express & Vite dev server:
+Start the development server (runs Express server and Vite on port `3000`):
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Access the application at `http://localhost:3000`.
 
-### Production Build & Launch
-Build the React bundle and server binary, then run:
+### Production Build & Execution
+Build the static bundle and Node.js server, then start the production runtime:
 ```bash
 npm run build
 npm start
@@ -152,74 +147,101 @@ npm start
 ```
 nolyvatix/
 ├── src/
-│   ├── components/       # UI design system, widgets, and layout panels
-│   ├── server/           # Express server, data engine, clients, repositories & routes
-│   ├── store/            # Zustand global application state
-│   ├── types/            # TypeScript interface definitions
-│   └── views/            # Main application pages and BI views
-├── docs/                 # Architectural specifications and project documentation
+│   ├── components/       # UI design system, page sections, and layout elements
+│   ├── server/           # Express server, data engine, clients, repositories & route handlers
+│   ├── store/            # Zustand global state management
+│   ├── types/            # TypeScript type definitions and interfaces
+│   └── views/            # Main application views and BI dashboards
+├── docs/                 # Product requirement documents and architecture specs
 ├── server.ts             # Node.js Express server entry point
-└── vite.config.ts        # Vite build configuration
+├── package.json          # Project scripts and dependency declarations
+└── vite.config.ts        # Vite frontend bundler configuration
 ```
 
 ---
 
 ## 📡 API Overview
 
-Nolyvatix mounts a structured REST API under the `/api` prefix:
+The Express backend exposes endpoints under the `/api` route prefix:
 
-- **Network & Ledgers** (`/api/network`, `/api/ledgers`): Network health, Horizon/Soroban status, throughput (TPS), and ledger headers.
-- **Transactions & Accounts** (`/api/transactions`, `/api/accounts`): Settlement history, operation logs, account balances, and trustlines.
-- **Assets & Liquidity** (`/api/assets`, `/api/liquidity-pools`): Verified assets, orderbooks, DEX trade aggregations, and liquidity pool metrics.
-- **Soroban Smart Contracts** (`/api/soroban`): WASM contract health, execution telemetry, invocations, and contract events.
-- **AI & Universal Search** (`/api/ai`, `/api/search`): Gemini AI copilot chat, WASM gas profiling, and universal entity search.
-- **Workspaces, Reports & Alerts** (`/api/workspaces`, `/api/reports`, `/api/alerts`): Workspace layout CRUD, shareable links, BI report exports, and alert rules.
+- `/api/network`: Network health, Horizon/Soroban status, and throughput (TPS) telemetry.
+- `/api/ledgers`: Closed ledger sequence history and header details.
+- `/api/transactions`: Transaction settlement logs and operation counts.
+- `/api/accounts`: Stellar public key balance and trustline inspection.
+- `/api/assets`: Asset verification, orderbook metrics, and DEX trade aggregations.
+- `/api/liquidity-pools`: AMM pool reserve ratios, TVL, and APY rates.
+- `/api/operations`: Network operation logs and payment corridor telemetry.
+- `/api/soroban`: WASM smart contract health, execution events, and invocation stats.
+- `/api/ai`: Gemini AI copilot chat, contract gas profiling, and natural language query processing.
+- `/api/dashboards`: Workspace layout CRUD, widget configuration, and pinning.
+- `/api/reports`: BI report generation and data package exports.
+- `/api/alerts`: Notification trigger configuration, event log history, and acknowledgment.
+- `/api/workspaces`: Multi-workspace CRUD, share link generation, and search history.
+- `/api/search`: Universal entity search engine.
+- `/api/settings`: Application preferences and refresh intervals.
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing & Quality Assurance
 
-Execute the test runner and code quality verification scripts:
+Execute backend unit tests and verification checks:
 
 ```bash
-# Run backend test suites (46 passing tests)
+# Run unit test suites via Node.js native test runner
 npm test
 
-# Run full project verification (linting, tests, build)
+# Run full project validation (TypeScript type check, unit tests, production build)
 npm run check
+
+# Run TypeScript type check only
+npm run lint
 ```
 
 ---
 
 ## 🚢 Deployment
 
-For production deployments (PM2, Docker, Nginx reverse proxy setup), refer to the detailed [Deployment Guide](DEPLOYMENT.md).
+Detailed instructions for running Nolyvatix in staging and production environments (PM2 process manager, Docker containerization, and Nginx reverse proxy configuration) can be found in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 
 ## 🗺️ Roadmap
 
-- [x] **Phase 1**: Real-time Command Center, Horizon SSE listener, Soroban RPC client, Gemini AI integration.
-- [x] **Phase 2**: Dashboard Builder, BI Reporting, Enterprise Alerting, Workspace Hub, Multi-format Exporter.
-- [ ] **Phase 3**: PostgreSQL/Redis state persistence, Helm/Kubernetes charts, OpenAPI Swagger UI.
+### Implemented (v1.0.0)
+- Real-time Command Center with live ledger monitoring and network switcher.
+- Drag-and-drop Dashboard Builder with layout persistence and custom KPI widgets.
+- BI Reporting Engine supporting executive digest generation and multi-format exports.
+- Multi-channel Alerting with threshold triggers (TPS drops, whale transfers, contract errors).
+- Universal Search Engine and Multi-Workspace Collaboration Hub.
+- Gemini AI Copilot for natural language telemetry queries and contract gas profiling.
 
-See [ROADMAP.md](ROADMAP.md) for full details.
+### Planned
+- PostgreSQL & Redis persistent database storage adapters.
+- Kubernetes Helm chart deployment definitions.
+- Interactive OpenAPI / Swagger UI documentation at `/api/docs`.
+
+For complete details, see [ROADMAP.md](ROADMAP.md).
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contributing & Governance
 
-Contributions, bug reports, and feature requests are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before submitting pull requests.
+Contributions are welcome! Please review the project guidelines before opening an issue or pull request:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — Contribution guidelines and development workflow.
+- [MAINTAINER.md](MAINTAINER.md) — Maintenance protocols and governance rules.
+- [SECURITY.md](SECURITY.md) — Vulnerability disclosure process.
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Community code of conduct.
 
 ---
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
 
 ---
 
 ## 👤 Author
 
-**AnnieIj**
-- GitHub: [@AnnieIj](https://github.com/AnnieIj)
+**AnnieIj**  
+GitHub: [@AnnieIj](https://github.com/AnnieIj)
