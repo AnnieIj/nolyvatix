@@ -136,6 +136,7 @@ export const Sidebar: React.FC = () => {
             onClick={toggleSidebar}
             className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-md transition-colors hidden md:block"
             title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            aria-label={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
             {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
           </button>

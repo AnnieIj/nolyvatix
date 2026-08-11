@@ -118,6 +118,7 @@ export const AppHeader: React.FC = () => {
             onClick={toggleTheme}
             className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors"
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            aria-label={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
           >
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>

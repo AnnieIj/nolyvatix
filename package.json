@@ -1,13 +1,18 @@
 {
   "name": "nolyvatix",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "test": "tsx --test src/server/__tests__/**/*.test.ts",
+    "check": "npm run lint && npm test && npm run build",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },

@@ -72,11 +72,20 @@ describe('WorkspaceService', () => {
 
   it('should resolve share token as viewer role', async () => {
     const svc = new WorkspaceService();
-    const { shareToken } = await svc.generateShareLink('ws-default');
+    const { shareToken, expiresAt } = await svc.generateShareLink('ws-default');
+    assert.ok(expiresAt);
     const resolved = await svc.resolveShareToken(shareToken);
     assert.ok(resolved);
     assert.strictEqual(resolved!.role, 'viewer');
     assert.strictEqual(resolved!.id, 'ws-default');
+  });
+
+  it('should reject expired share token', async () => {
+    const svc = new WorkspaceService();
+    // generate token with -1 day ttl (already expired)
+    const { shareToken } = await svc.generateShareLink('ws-default', -1);
+    const resolved = await svc.resolveShareToken(shareToken);
+    assert.strictEqual(resolved, null);
   });
 
   it('should toggle pin state for assets', async () => {

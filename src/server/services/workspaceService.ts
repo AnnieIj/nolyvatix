@@ -151,23 +151,31 @@ export class WorkspaceService {
   //  Shareable Read-Only Links
   // ─────────────────────────────────────────────
 
-  async generateShareLink(workspaceId: string): Promise<{ workspaceId: string; shareToken: string; shareUrl: string }> {
+  async generateShareLink(workspaceId: string, ttlDays = 7): Promise<{ workspaceId: string; shareToken: string; shareUrl: string; expiresAt: string }> {
     const ws = this.workspaces.get(workspaceId);
     if (!ws) throw new Error(`Workspace ${workspaceId} not found`);
 
     const shareToken = crypto.randomBytes(16).toString('hex');
+    const expiresAt = new Date(Date.now() + ttlDays * 86400000).toISOString();
     ws.shareToken = shareToken;
+    ws.shareTokenExpiresAt = expiresAt;
     ws.updatedAt = new Date().toISOString();
     this.workspaces.set(workspaceId, ws);
 
     const shareUrl = `/workspace/share/${shareToken}`;
-    logger.info(`Generated share link for workspace ${workspaceId}: ${shareUrl}`);
-    return { workspaceId, shareToken, shareUrl };
+    logger.info(`Generated share link for workspace ${workspaceId} (expires ${expiresAt}): ${shareUrl}`);
+    return { workspaceId, shareToken, shareUrl, expiresAt };
   }
 
   async resolveShareToken(token: string): Promise<WorkspaceMetadata | null> {
     for (const ws of this.workspaces.values()) {
-      if (ws.shareToken === token) return { ...ws, role: 'viewer' };
+      if (ws.shareToken === token) {
+        if (ws.shareTokenExpiresAt && new Date() > new Date(ws.shareTokenExpiresAt)) {
+          logger.warn(`Rejected expired share token for workspace: ${ws.id}`);
+          return null;
+        }
+        return { ...ws, role: 'viewer' };
+      }
     }
     return null;
   }

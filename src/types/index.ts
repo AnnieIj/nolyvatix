@@ -303,6 +303,7 @@ export interface WorkspaceMetadata {
   createdAt: string;
   updatedAt: string;
   shareToken?: string; // present when shareable link is generated
+  shareTokenExpiresAt?: string; // ISO expiration date string (e.g. 7-day TTL)
   workspace: UserWorkspace;
 }
 
