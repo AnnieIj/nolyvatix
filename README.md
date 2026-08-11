@@ -4,7 +4,7 @@
 [![Build Status](https://img.shields.io/badge/Build-Passing-emerald)](https://github.com/AnnieIj/nolyvatix)
 [![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen)](https://github.com/AnnieIj/nolyvatix)
 [![React](https://img.shields.io/badge/React-19.0-sky)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-7.0-blue)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4.0-38bdf8)](https://tailwindcss.com/)
 [![Stellar](https://img.shields.io/badge/Stellar-Horizon%20%2F%20Soroban-007afe)](https://stellar.org/)
 
@@ -80,7 +80,7 @@ flowchart TD
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React 19, TypeScript 7, Tailwind CSS v4, Zustand 5, Lucide React, Recharts 3, Motion 12, TanStack React Query 5
+- **Frontend**: React 19, TypeScript 5.8, Tailwind CSS v4, Zustand 5, Lucide React, Recharts 3, Motion 12, TanStack React Query 5
 - **Backend Engine**: Node.js (>=20.0.0), Express.js 4, `@google/genai` (Gemini AI SDK)
 - **Blockchain Protocol**: Direct REST (`HorizonClient`) and JSON-RPC 2.0 (`SorobanClient`) HTTP clients for Stellar and Soroban
 - **Build & Development**: Vite 6, esbuild, `tsx`, Node.js native test runner
