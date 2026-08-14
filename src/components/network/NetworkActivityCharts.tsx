@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ChartContainer } from '../common/ChartContainer';
 import { Tabs } from '../ui/Tabs';
 import { Badge } from '../ui/Badge';
@@ -14,7 +14,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { Activity, Zap, Clock, DollarSign, Layers } from 'lucide-react';
+import { Activity, Zap, Clock, DollarSign } from 'lucide-react';
 
 interface NetworkActivityChartsProps {
   timeRange: '1H' | '6H' | '24H' | '7D';
@@ -31,40 +31,45 @@ export const NetworkActivityCharts: React.FC<NetworkActivityChartsProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'tps' | 'ops' | 'closetime' | 'fees'>('tps');
 
-  // Derive chart data from ledgers or standard historical points
-  const chartData = (ledgers.length > 0 ? [...ledgers].reverse() : []).map((l, i) => {
-    const timeStr = l.closedAt
-      ? new Date(l.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      : `L-${i}`;
-    const txs = l.successfulTransactionCount || l.txs || 40;
-    const ops = l.operationCount || l.ops || 180;
-    const failedTxs = l.failedTransactionCount || 0;
-    const baseFee = l.baseFee || 100;
+  // Derive chart data from ledgers or standard historical points with stable memoization
+  const chartData = useMemo(() => {
+    if (!ledgers || ledgers.length === 0) return [];
+    return [...ledgers].reverse().map((l, i) => {
+      const timeStr = l.closedAt
+        ? new Date(l.closedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : `L-${i}`;
+      const txs = l.successfulTransactionCount ?? l.txs ?? 40;
+      const ops = l.operationCount ?? l.ops ?? 180;
+      const failedTxs = l.failedTransactionCount ?? 0;
+      const baseFee = l.baseFee ?? 100;
 
-    return {
-      time: timeStr,
-      seq: `#${l.sequence || i}`,
-      tps: Number((txs / 5.0).toFixed(1)),
-      ops,
-      txs,
-      failedTxs,
-      closeTimeSec: Number((4.5 + (i % 3) * 0.3).toFixed(1)),
-      baseFee,
-      feePool: Number((1200000 + i * 450).toFixed(0)),
-    };
-  });
+      return {
+        time: timeStr,
+        seq: `#${l.sequence || i}`,
+        tps: Number((txs / 5.0).toFixed(1)),
+        ops,
+        txs,
+        failedTxs,
+        closeTimeSec: Number((4.5 + (i % 3) * 0.3).toFixed(1)),
+        baseFee,
+        feePool: Number((1200000 + i * 450).toFixed(0)),
+      };
+    });
+  }, [ledgers]);
 
   // Fallback mock data if ledgers empty
-  const defaultChartData = [
+  const defaultChartData = useMemo(() => [
     { time: '10:00', seq: '#52918400', tps: 42.1, ops: 180, txs: 42, failedTxs: 2, closeTimeSec: 4.8, baseFee: 100, feePool: 1200000 },
     { time: '10:05', seq: '#52918401', tps: 48.5, ops: 210, txs: 50, failedTxs: 1, closeTimeSec: 5.1, baseFee: 100, feePool: 1200450 },
     { time: '10:10', seq: '#52918402', tps: 54.2, ops: 245, txs: 58, failedTxs: 3, closeTimeSec: 4.7, baseFee: 100, feePool: 1200900 },
     { time: '10:15', seq: '#52918403', tps: 51.0, ops: 220, txs: 52, failedTxs: 0, closeTimeSec: 4.9, baseFee: 100, feePool: 1201350 },
     { time: '10:20', seq: '#52918404', tps: 58.6, ops: 260, txs: 62, failedTxs: 2, closeTimeSec: 5.0, baseFee: 100, feePool: 1201800 },
     { time: '10:25', seq: '#52918405', tps: 53.4, ops: 230, txs: 55, failedTxs: 1, closeTimeSec: 4.8, baseFee: 100, feePool: 1202250 },
-  ];
+  ], []);
 
-  const dataToDisplay = chartData.length > 0 ? chartData : defaultChartData;
+  const dataToDisplay = useMemo(() => {
+    return chartData.length > 0 ? chartData : defaultChartData;
+  }, [chartData, defaultChartData]);
 
   const tabItems = [
     { id: 'tps', label: 'TPS & Transactions', icon: <Zap className="w-3.5 h-3.5" /> },

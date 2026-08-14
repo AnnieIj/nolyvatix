@@ -5,9 +5,11 @@ import { AppLayout } from './components/layout/AppLayout';
 import { AppRouter } from './router/AppRouter';
 import { useStellarStream } from './hooks/useStellarStream';
 
+const STREAM_TOPICS = ['all'];
+
 function AppContent() {
   // Activate live real-time Server-Sent Events (SSE) stream
-  useStellarStream({ topics: ['all'], enabled: true });
+  useStellarStream({ topics: STREAM_TOPICS, enabled: true });
 
   return (
     <AppLayout>

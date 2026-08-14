@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -12,7 +10,6 @@ import {
   YAxis,
   Tooltip,
   Legend,
-  Treemap,
 } from 'recharts';
 import { Users, TrendingUp, DollarSign, PieChart as PieIcon, Layers, BarChart3 } from 'lucide-react';
 import { StellarAsset } from '../../server/types/stellar';
@@ -26,38 +23,41 @@ const COLORS = ['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b'
 export const AssetAnalyticsSection: React.FC<AssetAnalyticsSectionProps> = ({ assets }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d' | '90d'>('30d');
 
-  // Compute total holders across top tracked assets
-  const totalHoldersCount = assets.reduce((acc, a) => acc + (a.numAccounts || 0), 0);
-  const totalLiquidityPoolAmount = assets.reduce((acc, a) => acc + (parseFloat(a.liquidityPoolsAmount || '0')), 0);
+  // Compute total holders and liquidity across top tracked assets with useMemo
+  const totalHoldersCount = useMemo(() => {
+    return assets.reduce((acc, a) => acc + (a.numAccounts || 0), 0);
+  }, [assets]);
+
+  const totalLiquidityPoolAmount = useMemo(() => {
+    return assets.reduce((acc, a) => acc + parseFloat(a.liquidityPoolsAmount || '0'), 0);
+  }, [assets]);
 
   // Distribution chart data: Top 6 assets by holder accounts
-  const topHoldersDistribution = [...assets]
-    .sort((a, b) => b.numAccounts - a.numAccounts)
-    .slice(0, 6)
-    .map((a) => ({
-      name: a.assetCode,
-      holders: a.numAccounts,
-      supply: parseFloat(a.amount || '0'),
-      liquidity: parseFloat(a.liquidityPoolsAmount || '0'),
-    }));
-
-  // Treemap data format for Asset Concentration
-  const treemapData = topHoldersDistribution.map((a) => ({
-    name: a.name,
-    size: a.holders,
-  }));
+  const topHoldersDistribution = useMemo(() => {
+    return [...assets]
+      .sort((a, b) => (b.numAccounts || 0) - (a.numAccounts || 0))
+      .slice(0, 6)
+      .map((a) => ({
+        name: a.assetCode,
+        holders: a.numAccounts || 0,
+        supply: parseFloat(a.amount || '0'),
+        liquidity: parseFloat(a.liquidityPoolsAmount || '0'),
+      }));
+  }, [assets]);
 
   // Synthetic trend series modeling trustline growth and payment volume over time
-  const growthTrendData = Array.from({ length: 12 }, (_, i) => {
-    const monthStr = new Date(2026, i, 1).toLocaleDateString([], { month: 'short' });
-    const factor = 1 + i * 0.08;
-    return {
-      month: monthStr,
-      trustlines: Math.round(totalHoldersCount * 0.4 * factor),
-      paymentVolumeUSD: Math.round(145000000 * factor + (i % 3) * 12000000),
-      dexTradeVolumeUSD: Math.round(48000000 * factor + (i % 2) * 5000000),
-    };
-  });
+  const growthTrendData = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const monthStr = new Date(2026, i, 1).toLocaleDateString([], { month: 'short' });
+      const factor = 1 + i * 0.08;
+      return {
+        month: monthStr,
+        trustlines: Math.round(totalHoldersCount * 0.4 * factor),
+        paymentVolumeUSD: Math.round(145000000 * factor + (i % 3) * 12000000),
+        dexTradeVolumeUSD: Math.round(48000000 * factor + (i % 2) * 5000000),
+      };
+    });
+  }, [totalHoldersCount]);
 
   return (
     <div className="space-y-6">
@@ -153,7 +153,7 @@ export const AssetAnalyticsSection: React.FC<AssetAnalyticsSectionProps> = ({ as
           </div>
 
           <div className="h-72 w-full pt-2">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
               <AreaChart data={growthTrendData}>
                 <defs>
                   <linearGradient id="trustlinesGrad" x1="0" y1="0" x2="0" y2="1">
@@ -192,7 +192,7 @@ export const AssetAnalyticsSection: React.FC<AssetAnalyticsSectionProps> = ({ as
           </div>
 
           <div className="h-72 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
               <PieChart>
                 <Pie
                   data={topHoldersDistribution}

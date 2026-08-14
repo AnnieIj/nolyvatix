@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -9,7 +9,7 @@ import {
   LineChart,
   Line,
 } from 'recharts';
-import { ArrowUpDown, RefreshCw, Activity, Layers, Clock, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import { Activity, Layers, Clock, TrendingUp, RefreshCw } from 'lucide-react';
 import { StellarOrderBook, StellarTrade, TradeAggregation } from '../../server/types/stellar';
 
 interface DexIntelligenceSectionProps {
@@ -47,21 +47,23 @@ export const DexIntelligenceSection: React.FC<DexIntelligenceSectionProps> = ({
   };
 
   // Build depth chart dataset from orderBook bids and asks
-  const bids = orderBook?.bids || [];
-  const asks = orderBook?.asks || [];
+  const bids = useMemo(() => orderBook?.bids || [], [orderBook?.bids]);
+  const asks = useMemo(() => orderBook?.asks || [], [orderBook?.asks]);
 
-  const depthData = [
-    ...bids.slice(0, 15).map((b) => ({
-      price: parseFloat(b.price),
-      bidDepth: b.depthCumulative || parseFloat(b.amount),
-      askDepth: 0,
-    })).reverse(),
-    ...asks.slice(0, 15).map((a) => ({
-      price: parseFloat(a.price),
-      bidDepth: 0,
-      askDepth: a.depthCumulative || parseFloat(a.amount),
-    })),
-  ];
+  const depthData = useMemo(() => {
+    return [
+      ...bids.slice(0, 15).map((b) => ({
+        price: parseFloat(b.price),
+        bidDepth: b.depthCumulative || parseFloat(b.amount),
+        askDepth: 0,
+      })).reverse(),
+      ...asks.slice(0, 15).map((a) => ({
+        price: parseFloat(a.price),
+        bidDepth: 0,
+        askDepth: a.depthCumulative || parseFloat(a.amount),
+      })),
+    ];
+  }, [bids, asks]);
 
   const spread = orderBook?.spread || 0;
   const spreadPct = orderBook?.spreadPercentage || 0;
@@ -206,7 +208,7 @@ export const DexIntelligenceSection: React.FC<DexIntelligenceSectionProps> = ({
           </div>
 
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
               <AreaChart data={depthData}>
                 <XAxis dataKey="price" stroke="#64748b" fontSize={10} tickFormatter={(v) => v.toFixed(4)} />
                 <YAxis stroke="#64748b" fontSize={10} />
@@ -240,7 +242,7 @@ export const DexIntelligenceSection: React.FC<DexIntelligenceSectionProps> = ({
                 No historical trade aggregation records available for this pair.
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
                 <LineChart data={tradeAggregations}>
                   <XAxis dataKey="dateStr" stroke="#64748b" fontSize={10} />
                   <YAxis stroke="#64748b" fontSize={10} domain={['auto', 'auto']} tickFormatter={(v) => v.toFixed(4)} />

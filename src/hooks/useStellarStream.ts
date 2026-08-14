@@ -1,10 +1,10 @@
 /**
  * Nolyvatix Real-Time SSE Stream Hook (useStellarStream)
  * Subscribes to the backend Server-Sent Events (SSE) stream, auto-reconnects,
- * syncs with Zustand store, and seamlessly updates TanStack Query caches.
+ * syncs with Zustand store, and seamlessly updates TanStack Query caches without infinite loops.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '../store/useAppStore';
 
@@ -18,11 +18,12 @@ export interface StreamConnectionState {
   isConnecting: boolean;
   error: string | null;
   lastEventAt: string | null;
-  reconnectAttempts: number;
 }
 
 export function useStellarStream(options: UseStellarStreamOptions = {}) {
-  const { topics = ['all'], enabled = true } = options;
+  const { topics, enabled = true } = options;
+  const topicsKey = useMemo(() => (topics && topics.length > 0 ? topics.join(',') : 'all'), [topics ? topics.join(',') : 'all']);
+
   const queryClient = useQueryClient();
   const setNetworkTelemetry = useAppStore((s) => s.setNetworkTelemetry);
   const setStellarNetwork = useAppStore((s) => s.setStellarNetwork);
@@ -32,49 +33,63 @@ export function useStellarStream(options: UseStellarStreamOptions = {}) {
     isConnecting: false,
     error: null,
     lastEventAt: null,
-    reconnectAttempts: 0,
   });
 
+  const reconnectAttemptsRef = useRef(0);
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const cleanup = useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+  }, []);
 
   const connect = useCallback(() => {
     if (!enabled || typeof window === 'undefined') return;
 
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
+    cleanup();
 
-    setConnectionState((prev) => ({ ...prev, isConnecting: true, error: null }));
+    setConnectionState((prev) => {
+      if (prev.isConnecting) return prev;
+      return { ...prev, isConnecting: true, error: null };
+    });
 
-    const topicsParam = topics.join(',');
-    const sseUrl = `/api/stream/events?topics=${encodeURIComponent(topicsParam)}`;
+    const sseUrl = `/api/stream/events?topics=${encodeURIComponent(topicsKey)}`;
     const es = new EventSource(sseUrl);
     eventSourceRef.current = es;
 
     es.onopen = () => {
+      reconnectAttemptsRef.current = 0;
       setConnectionState({
         isConnected: true,
         isConnecting: false,
         error: null,
         lastEventAt: new Date().toISOString(),
-        reconnectAttempts: 0,
       });
     };
 
-    es.onerror = (_err) => {
-      setConnectionState((prev) => ({
-        ...prev,
+    es.onerror = () => {
+      reconnectAttemptsRef.current += 1;
+      setConnectionState({
         isConnected: false,
         isConnecting: false,
         error: 'Stream disconnected, attempting reconnection...',
-        reconnectAttempts: prev.reconnectAttempts + 1,
-      }));
+        lastEventAt: null,
+      });
 
-      es.close();
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
 
       // Exponential backoff reconnect
-      const delay = Math.min(1000 * Math.pow(1.5, connectionState.reconnectAttempts), 10000);
+      const delay = Math.min(1000 * Math.pow(1.5, reconnectAttemptsRef.current), 10000);
       reconnectTimeoutRef.current = setTimeout(() => {
         connect();
       }, delay);
@@ -85,27 +100,20 @@ export function useStellarStream(options: UseStellarStreamOptions = {}) {
       try {
         const payload = JSON.parse(e.data);
         const ledger = payload.ledger;
+        if (!ledger) return;
 
-        setConnectionState((prev) => ({ ...prev, lastEventAt: new Date().toISOString() }));
-
-        // Update latestLedgers Query cache
+        // Update latestLedgers Query cache smoothly
         queryClient.setQueryData(['latestLedgers', 20], (oldData: any[] | undefined) => {
           if (!oldData) return [ledger];
-          const exists = oldData.some((l) => l.sequence === ledger.sequence);
-          if (exists) return oldData;
+          if (oldData.some((l) => l.sequence === ledger.sequence)) return oldData;
           return [ledger, ...oldData.slice(0, 19)];
         });
 
-        // Update latestLedgers (10 count)
         queryClient.setQueryData(['latestLedgers', 10], (oldData: any[] | undefined) => {
           if (!oldData) return [ledger];
-          const exists = oldData.some((l) => l.sequence === ledger.sequence);
-          if (exists) return oldData;
+          if (oldData.some((l) => l.sequence === ledger.sequence)) return oldData;
           return [ledger, ...oldData.slice(0, 9)];
         });
-
-        // Invalidate dependent queries
-        queryClient.invalidateQueries({ queryKey: ['networkHealth'] });
       } catch {}
     });
 
@@ -186,20 +194,14 @@ export function useStellarStream(options: UseStellarStreamOptions = {}) {
         queryClient.setQueryData(['liquidityMetrics'], data);
       } catch {}
     });
-  }, [enabled, topics, queryClient, setNetworkTelemetry, setStellarNetwork, connectionState.reconnectAttempts]);
+  }, [enabled, topicsKey, queryClient, setNetworkTelemetry, setStellarNetwork, cleanup]);
 
   useEffect(() => {
     connect();
-
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
+      cleanup();
     };
-  }, [connect]);
+  }, [connect, cleanup]);
 
   return {
     ...connectionState,

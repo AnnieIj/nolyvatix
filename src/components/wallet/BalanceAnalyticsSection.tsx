@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   PieChart,
   Pie,
@@ -22,9 +22,15 @@ const COLORS = ['#0284c7', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'
 export const BalanceAnalyticsSection: React.FC<BalanceAnalyticsSectionProps> = ({ analytics }) => {
   if (!analytics) return null;
 
-  const { balances, trustlines, balanceHistory } = analytics;
+  const { balances, trustlines = [], balanceHistory: rawHistory = [] } = analytics;
 
-  const assetAllocations = balances?.assetAllocations || [];
+  const assetAllocations = useMemo(() => {
+    return balances?.assetAllocations || [];
+  }, [balances?.assetAllocations]);
+
+  const balanceHistory = useMemo(() => {
+    return rawHistory || [];
+  }, [rawHistory]);
 
   const formatNumber = (num: number) =>
     num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -59,7 +65,7 @@ export const BalanceAnalyticsSection: React.FC<BalanceAnalyticsSectionProps> = (
           </div>
 
           <div className="h-52 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
               <PieChart>
                 <Pie
                   data={assetAllocations}
@@ -124,8 +130,8 @@ export const BalanceAnalyticsSection: React.FC<BalanceAnalyticsSectionProps> = (
           </div>
 
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={balanceHistory || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={50}>
+              <AreaChart data={balanceHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorBal" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
