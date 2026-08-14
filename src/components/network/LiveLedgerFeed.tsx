@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GlassCard } from '../ui/GlassCard';
 import { Badge } from '../ui/Badge';
@@ -12,8 +12,9 @@ import {
   Clock,
   ArrowRight,
   ChevronRight,
+  Filter,
 } from 'lucide-react';
-import { formatTimeAgo } from '../../lib/utils';
+import { formatTimeAgo, formatNumber } from '../../lib/utils';
 
 interface LiveLedgerFeedProps {
   ledgers?: any[];
@@ -25,7 +26,7 @@ interface LiveLedgerFeedProps {
   onSelectLedger: (sequence: number) => void;
 }
 
-export const LiveLedgerFeed: React.FC<LiveLedgerFeedProps> = React.memo(({
+export const LiveLedgerFeed: React.FC<LiveLedgerFeedProps> = ({
   ledgers = [],
   isLoading = false,
   isFetching = false,
@@ -36,19 +37,13 @@ export const LiveLedgerFeed: React.FC<LiveLedgerFeedProps> = React.memo(({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Cap feed list to max 50 items & memoize filtering to prevent memory bloat in long sessions
-  const filteredLedgers = useMemo(() => {
-    if (!ledgers || ledgers.length === 0) return [];
+  const filteredLedgers = ledgers.filter((l) => {
+    if (!searchTerm) return true;
+    const seqStr = String(l.sequence || '');
+    const hashStr = String(l.hash || '').toLowerCase();
     const term = searchTerm.toLowerCase().trim();
-    const list = term
-      ? ledgers.filter((l) => {
-          const seqStr = String(l.sequence || '');
-          const hashStr = String(l.hash || '').toLowerCase();
-          return seqStr.includes(term) || hashStr.includes(term);
-        })
-      : ledgers;
-    return list.slice(0, 50);
-  }, [ledgers, searchTerm]);
+    return seqStr.includes(term) || hashStr.includes(term);
+  });
 
   return (
     <GlassCard
@@ -137,7 +132,7 @@ export const LiveLedgerFeed: React.FC<LiveLedgerFeedProps> = React.memo(({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
+                transition={{ duration: 0.2 }}
                 onClick={() => onSelectLedger(ledger.sequence)}
                 className="p-3 bg-zinc-950/80 border border-zinc-800/80 rounded-lg flex items-center justify-between hover:border-sky-500/50 hover:bg-zinc-900/90 transition-all cursor-pointer group"
               >
@@ -191,6 +186,4 @@ export const LiveLedgerFeed: React.FC<LiveLedgerFeedProps> = React.memo(({
       </div>
     </GlassCard>
   );
-});
-
-LiveLedgerFeed.displayName = 'LiveLedgerFeed';
+};

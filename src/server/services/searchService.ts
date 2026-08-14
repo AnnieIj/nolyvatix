@@ -1,8 +1,6 @@
 /**
- * Nolyvatix Data Engine - Universal Search Intelligence Service
- * Single unified search across Wallets, Assets, Transactions, Ledgers, Contracts,
- * Pools, Reports, Dashboards, Alerts, and AI Conversations.
- * Automatically persists search queries to workspace history.
+ * Nolyvatix Data Engine - Universal Search Service
+ * Single unified search across Wallets, Assets, Transactions, Ledgers, Contracts, Pools, Reports, Dashboards, and AI Conversations
  */
 
 import { SearchResultItem } from '../../types/index.js';
@@ -12,8 +10,6 @@ import { LiquidityPoolService } from './liquidityPoolService.js';
 import { SorobanService } from './sorobanService.js';
 import { DashboardService } from './dashboardService.js';
 import { ReportService } from './reportService.js';
-import { AlertService } from './alertService.js';
-import { WorkspaceService } from './workspaceService.js';
 
 const logger = new Logger('SearchService');
 
@@ -23,19 +19,12 @@ export class SearchService {
     private poolService: LiquidityPoolService,
     private sorobanService: SorobanService,
     private dashboardService: DashboardService,
-    private reportService: ReportService,
-    private alertService: AlertService,
-    private workspaceService: WorkspaceService
+    private reportService: ReportService
   ) {}
 
-  async universalSearch(query: string, persistToHistory = true): Promise<SearchResultItem[]> {
+  async universalSearch(query: string): Promise<SearchResultItem[]> {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-
-    // Persist query to workspace search history (fire-and-forget)
-    if (persistToHistory) {
-      this.workspaceService.addRecentSearch(query).catch(() => {});
-    }
 
     const results: SearchResultItem[] = [];
 
@@ -139,24 +128,7 @@ export class SearchService {
       }
     });
 
-    // 9. Alert Rules
-    const alerts = await this.alertService.getAllAlerts().catch(() => []);
-    alerts.forEach((a) => {
-      const aName = a.name.toLowerCase();
-      const aTarget = a.target.toLowerCase();
-      if (aName.includes(q) || aTarget.includes(q) || q.includes('alert')) {
-        results.push({
-          id: `alert-${a.id}`,
-          type: 'dashboard', // closest existing SearchResultItem type
-          title: `Alert: ${a.name}`,
-          subtitle: `Target: ${a.target} | ${a.condition} ${a.threshold.toLocaleString()} | Channel: ${a.channel}`,
-          metadata: { alertId: a.id, severity: a.severity, enabled: a.enabled },
-          routeUrl: `#/alert-center`,
-        });
-      }
-    });
-
-    // 10. AI Conversations
+    // 9. AI Conversations
     if (q.includes('ai') || q.includes('gemini') || q.includes('copilot') || q.includes('gas') || q.includes('summary')) {
       results.push({
         id: `ai-chat-1`,
@@ -169,13 +141,5 @@ export class SearchService {
 
     logger.info(`Universal search for "${query}" returned ${results.length} results.`);
     return results;
-  }
-
-  /**
-   * Returns recent search history from the active workspace.
-   */
-  async getSearchHistory(): Promise<string[]> {
-    const ws = await this.workspaceService.getWorkspace();
-    return ws.recentSearches;
   }
 }

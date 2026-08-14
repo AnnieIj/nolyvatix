@@ -13,12 +13,6 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, helperText, leftIcon, rightIcon, id, ...props }, ref) => {
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
-    const errorId = inputId ? `${inputId}-error` : undefined;
-    const helperId = inputId ? `${inputId}-helper` : undefined;
-    const describedBy = [error ? errorId : null, helperText && !error ? helperId : null]
-      .filter(Boolean)
-      .join(' ') || undefined;
-
     return (
       <div className="w-full flex flex-col gap-1.5">
         {label && (
@@ -35,10 +29,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             id={inputId}
             ref={ref}
-            aria-invalid={Boolean(error)}
-            aria-describedby={describedBy}
             className={cn(
-              'w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 font-mono focus:outline-none focus:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/50 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed',
+              'w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 font-mono focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500/50 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed',
               leftIcon && 'pl-9',
               rightIcon && 'pr-9',
               error && 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/50',
@@ -52,8 +44,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             </div>
           )}
         </div>
-        {error && <p id={errorId} className="text-xs text-rose-400">{error}</p>}
-        {helperText && !error && <p id={helperId} className="text-xs text-zinc-500">{helperText}</p>}
+        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {helperText && !error && <p className="text-xs text-zinc-500">{helperText}</p>}
       </div>
     );
   }

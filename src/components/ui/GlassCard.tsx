@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 
-export interface GlassCardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
+export interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
   elevation?: 0 | 1 | 2 | 3;
   title?: React.ReactNode;
   subtitle?: React.ReactNode;

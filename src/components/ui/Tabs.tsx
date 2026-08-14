@@ -25,7 +25,6 @@ export const Tabs: React.FC<TabsProps> = ({
 }) => {
   return (
     <div
-      role="tablist"
       className={cn(
         'inline-flex items-center gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-lg',
         className
@@ -36,25 +35,19 @@ export const Tabs: React.FC<TabsProps> = ({
         return (
           <button
             key={tab.id}
-            role="tab"
-            id={`tab-${tab.id}`}
-            aria-selected={isActive}
-            aria-controls={`tabpanel-${tab.id}`}
-            tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'flex items-center gap-2 font-medium rounded transition-all duration-150 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-950',
+              'flex items-center gap-2 font-medium rounded transition-all duration-150 select-none',
               size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',
               isActive
                 ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80 font-semibold'
                 : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/60'
             )}
           >
-            {tab.icon && <span className="shrink-0" aria-hidden="true">{tab.icon}</span>}
+            {tab.icon && <span className="shrink-0">{tab.icon}</span>}
             <span>{tab.label}</span>
             {tab.badge !== undefined && (
               <span
-                aria-label={`${tab.badge} items`}
                 className={cn(
                   'px-1.5 py-0.2 rounded text-[10px] font-mono',
                   isActive

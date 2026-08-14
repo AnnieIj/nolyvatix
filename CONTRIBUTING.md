@@ -1,17 +1,18 @@
 # Contributing to Nolyvatix
 
-First off, thank you for considering contributing to **Nolyvatix**! 🎉  
-Nolyvatix is an open-source Business Intelligence & Analytics platform built for the Stellar blockchain ecosystem and Soroban WASM smart contracts.
+First off, thank you for considering contributing to **Nolyvatix**! 🎉
+Nolyvatix is an open-source, enterprise-grade Business Intelligence platform built for the Stellar blockchain ecosystem.
 
-Whether you are fixing a bug, writing unit tests, improving documentation, or creating new analytical views, your help is welcome!
+Whether you're fixing a bug, adding a new Soroban contract decoder feature, improving documentation, or creating new dashboard visualizations, your help is welcome!
 
 ---
 
 ## 🛠️ Local Development Setup
 
 ### Prerequisites
-- **Node.js**: `v20.x` or higher
-- **npm**: `v10.x` or higher
+
+- **Node.js**: v20.x or higher
+- **npm**: v10.x or higher
 - **Git**
 
 ### Installation Steps
@@ -32,58 +33,85 @@ Whether you are fixing a bug, writing unit tests, improving documentation, or cr
    ```bash
    cp .env.example .env
    ```
-   Add your keys (e.g. `GEMINI_API_KEY` for AI Copilot features).
+   Add your keys (e.g. `GEMINI_API_KEY` for AI features, or custom Horizon/Soroban RPC endpoints).
 
-4. **Start Development Server**:
+4. **Start Dev Server**:
    ```bash
    npm run dev
    ```
    Open `http://localhost:3000` in your browser.
 
-5. **Run Verification Suite**:
+5. **Run Typechecks and Linting**:
    ```bash
-   npm run lint       # Runs TypeScript typecheck (tsc --noEmit)
-   npm test           # Runs full 46-test unit suite (tsx --test)
-   npm run build      # Builds Vite frontend + esbuild server bundle
+   npm run lint
    ```
 
 ---
 
 ## 📐 Coding Standards & Guidelines
 
-- **TypeScript**: Strict mode enabled. All functions, components, services, and DTOs must be explicitly typed in `src/types/index.ts`. Avoid `any`.
-- **Architecture**:
-  - Presentation components live in `src/views/` and `src/components/`.
-  - Service logic lives in `src/server/services/`.
-  - Data clients live in `src/server/clients/` and `src/server/repositories/`.
-  - Express routes live in `src/server/routes/`.
-- **Response Wrapper**: All API controllers must use `sendSuccess(res, data)` or `sendError(res, message, status)`.
-- **Styling**: Tailwind CSS v4 utility classes + Lucide React icons.
-- **State Management**: Zustand (`src/store/useAppStore.ts`).
+- **TypeScript**: Strict mode is enabled. All functions, components, props, and API state payloads must be explicitly typed (`/src/types/index.ts`). Avoid `any`.
+- **Styling**: Use **Tailwind CSS v4** utility classes. Do not write inline styles or standard CSS files.
+- **Icons**: Always import icons from `lucide-react`.
+- **State Management**: Use Zustand (`/src/store/useAppStore.ts`) for global application state and TanStack Query (`/src/services/queryClient.ts`) for asynchronous API data fetching.
+- **Component Design**: Keep UI modular and accessible. Follow the atomic design structure in `/src/components/`.
 
 ---
 
-## 🌿 Branch & Commit Conventions
+## 🌿 Branch Naming Convention
 
-### Branch Naming
-- `feat/feature-name` (e.g. `feat/soroban-event-filter`)
-- `fix/bug-description` (e.g. `fix/horizon-rate-limit`)
-- `docs/topic-name` (e.g. `docs/api-guide`)
-- `test/test-description` (e.g. `test/alert-history`)
+Use clear, structured branch names:
 
-### Commit Messages
-Follow [Conventional Commits](https://www.conventionalcommits.org/):
-- `feat: add alert history event log viewer`
-- `fix: correct parameter ordering in responseWrapper`
-- `docs: update API endpoints in README`
-- `test: add unit tests for WorkspaceService`
+- `feat/feature-name` (e.g., `feat/soroban-event-parser`)
+- `fix/bug-description` (e.g., `fix/horizon-sse-reconnect`)
+- `docs/topic-name` (e.g., `docs/architecture-update`)
+- `refactor/component-name` (e.g., `refactor/chart-container`)
+- `chore/task-description` (e.g., `chore/bump-deps`)
+
+---
+
+## 📝 Commit Message Convention
+
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+
+- `feat: add Soroban WASM instruction counter widget`
+- `fix: resolve stale connection in Horizon ledger stream`
+- `docs: update deployment instructions in README`
+- `style: refine glassmorphic card contrast ratios`
+- `refactor: extract status chip component to UI design system`
+- `test: add unit tests for utility number formatters`
 
 ---
 
 ## 🔄 Pull Request Process
 
-1. **Create an Issue**: Discuss planned changes before submitting major PRs.
-2. **Branch from `main`**: Ensure your branch is rebased on latest `main`.
-3. **Run Verification**: Ensure `npm run lint`, `npm test`, and `npm run build` all pass cleanly with 0 errors.
-4. **Submit PR**: Fill out the PR template completely and tag relevant issues.
-5. **Code Review**: A maintainer will review your submission promptly.
+1. **Create an Issue**: Before starting major work, create an issue or comment on an existing issue to discuss your planned changes.
+2. **Branch from `main`**: Ensure your feature branch is created from the latest `main`.
+3. **Commit Your Changes**: Follow commit conventions.
+4. **Run Verification**:
+   ```bash
+   npm run lint
+   npm run build
+   ```
+5. **Submit PR**: Fill out the Pull Request template completely. Link the relevant issue number (e.g., `Closes #42`).
+6. **Code Review**: A maintainer will review your code. Address any feedback promptly.
+
+---
+
+## 🐛 Issue Reporting
+
+When reporting a bug, please use the **Bug Report** issue template and include:
+- A clear, descriptive title.
+- Steps to reproduce the behavior.
+- Expected vs actual result.
+- Browser/OS details and console error logs.
+
+---
+
+## 🔍 Code Review Guidelines
+
+Maintainers look for:
+1. **Adherence to Type Safety**: No implicit `any` or missing interfaces.
+2. **Performance**: Efficient re-rendering, proper memoization or query caching.
+3. **Security**: Server-side proxying for sensitive API keys.
+4. **UI Consistency**: Alignment with Nolyvatix / LumenIQ design tokens.

@@ -127,7 +127,7 @@ export function initializeDataEngine(
   const reportService = new ReportService(networkService, assetService, poolService, sorobanService);
   const alertService = new AlertService();
   const workspaceService = new WorkspaceService();
-  const searchService = new SearchService(assetService, poolService, sorobanService, dashboardService, reportService, alertService, workspaceService);
+  const searchService = new SearchService(assetService, poolService, sorobanService, dashboardService, reportService);
   const settingsService = new SettingsService();
 
   // Initialize Main API Router

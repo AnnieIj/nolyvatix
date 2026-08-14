@@ -3,6 +3,7 @@ import { SearchResultItem } from '../types';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Badge } from '../components/ui/Badge';
 import { useAppStore } from '../store/useAppStore';
+import { resolveRoute } from '../router/routeRegistry';
 import {
   Search,
   Wallet,
@@ -77,6 +78,13 @@ export const SearchCenterView: React.FC = () => {
     }
   };
 
+  const handleItemClick = (routeUrl?: string) => {
+    if (routeUrl) {
+      const target = resolveRoute(routeUrl);
+      setActiveRoute(target);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto font-sans">
       {/* Header */}
@@ -138,24 +146,22 @@ export const SearchCenterView: React.FC = () => {
           filteredResults.map((item) => (
             <GlassCard
               key={item.id}
-              className="p-4 flex items-center justify-between border-zinc-800/80 hover:border-sky-500/50 transition-all cursor-pointer"
+              onClick={() => handleItemClick(item.routeUrl)}
+              className="p-4 flex items-center justify-between border-zinc-800/80 hover:border-sky-500/50 transition-all cursor-pointer group"
             >
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-zinc-950 border border-zinc-800 rounded-lg shrink-0">
+                <div className="p-2.5 bg-zinc-950 border border-zinc-800 rounded-lg shrink-0 group-hover:border-sky-500/40 transition-colors">
                   {getTypeIcon(item.type)}
                 </div>
                 <div>
-                  <div className="font-bold text-white text-sm">{item.title}</div>
+                  <div className="font-bold text-white text-sm group-hover:text-sky-400 transition-colors">{item.title}</div>
                   <div className="text-zinc-400 text-xs mt-0.5">{item.subtitle}</div>
                 </div>
               </div>
 
-              <a
-                href={item.routeUrl || '#'}
-                className="p-2 text-zinc-400 hover:text-sky-400 transition-colors"
-              >
+              <div className="p-2 text-zinc-400 group-hover:text-sky-400 transition-colors">
                 <ExternalLink className="w-4 h-4" />
-              </a>
+              </div>
             </GlassCard>
           ))
         ) : query.trim() ? (

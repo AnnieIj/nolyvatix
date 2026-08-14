@@ -20,7 +20,11 @@ export type NavRoute =
   | 'assets-corridors'
   | 'ai-copilot'
   | 'custom-dashboards'
-  | 'alerts-settings';
+  | 'alerts-settings'
+  | 'not-found'
+  | 'access-denied'
+  | 'server-error'
+  | 'offline';
 
 export interface WalletState {
   isConnected: boolean;
@@ -147,7 +151,6 @@ export interface AIChatMessage {
     dataKeys?: string[];
   };
   anomalyDetected?: boolean;
-  suggestedFollowups?: string[];
 }
 
 export type WidgetType = 
@@ -173,7 +176,7 @@ export interface WidgetConfig {
   widgetType?: WidgetType;
   metricKey?: string;
   dataKey?: string;
-  gridSpan: 1 | 2 | 3 | 4 | 6 | 8 | 12; // columns span out of 12
+  gridSpan: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12; // columns span out of 12
   customSettings?: Record<string, any>;
 }
 
@@ -199,13 +202,9 @@ export type AlertTarget =
   | 'trustline_spike'
   | 'dex_volume_spike'
   | 'pool_tvl_change'
-  | 'soroban_failure'
-  | 'network_health'
-  | 'liquidity_drop'
-  | 'wallet_balance_drop';
+  | 'soroban_failure';
 
 export type AlertChannel = 'browser' | 'email' | 'webhook' | 'slack' | 'discord';
-export type AlertSeverity = 'info' | 'warning' | 'critical';
 
 export interface AlertRule {
   id: string;
@@ -216,36 +215,7 @@ export interface AlertRule {
   channel: AlertChannel;
   destination?: string;
   enabled: boolean;
-  severity?: AlertSeverity;
   lastTriggered?: string;
-  triggerCount?: number;
-}
-
-export interface AlertHistoryEntry {
-  id: string;
-  alertId: string;
-  alertName: string;
-  target: AlertTarget;
-  channel: AlertChannel;
-  severity: AlertSeverity;
-  triggeredAt: string;
-  currentValue: number;
-  threshold: number;
-  condition: 'above' | 'below' | 'equals';
-  acknowledged: boolean;
-  acknowledgedAt?: string;
-  payload: Record<string, any>;
-}
-
-export interface AlertStats {
-  totalRules: number;
-  enabledRules: number;
-  disabledRules: number;
-  totalTriggeredLast24h: number;
-  unacknowledgedCount: number;
-  criticalCount: number;
-  warningCount: number;
-  channelBreakdown: Record<AlertChannel, number>;
 }
 
 export interface BIReport {
@@ -290,21 +260,6 @@ export interface BIReport {
     aiRecommendations: string[];
     kpis: { label: string; value: string; change: string }[];
   };
-}
-
-export type WorkspaceRole = 'owner' | 'editor' | 'viewer';
-
-export interface WorkspaceMetadata {
-  id: string;
-  name: string;
-  description: string;
-  role: WorkspaceRole;
-  isDefault: boolean;
-  createdAt: string;
-  updatedAt: string;
-  shareToken?: string; // present when shareable link is generated
-  shareTokenExpiresAt?: string; // ISO expiration date string (e.g. 7-day TTL)
-  workspace: UserWorkspace;
 }
 
 export interface UserWorkspace {

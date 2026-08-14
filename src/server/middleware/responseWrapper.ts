@@ -51,25 +51,9 @@ export function sendSuccess<T>(res: Response, data: T, statusCode = 200): void {
   res.status(statusCode).json(createSuccessResponse(data));
 }
 
-export function sendError(
-  res: Response,
-  messageOrCode: string,
-  statusCodeOrMessage: number | string = 400,
-  codeOrDetails?: unknown
-): void {
-  let message = messageOrCode;
-  let statusCode = 400;
-  let code = 'ERROR';
-
-  if (typeof statusCodeOrMessage === 'number') {
-    statusCode = statusCodeOrMessage;
-    code = typeof codeOrDetails === 'string' ? codeOrDetails : 'ERROR';
-  } else {
-    code = messageOrCode;
-    message = statusCodeOrMessage;
-  }
-
-  res.status(statusCode).json(createErrorResponse(code, message));
+export function sendError(res: Response, message: string, statusCode = 400, code = 'ERROR', details?: unknown): void {
+  const resolvedCode = statusCode === 404 ? 'NOT_FOUND' : code;
+  res.status(statusCode).json(createErrorResponse(resolvedCode, message, details));
 }
 
 export function globalErrorHandler(
@@ -87,4 +71,3 @@ export function globalErrorHandler(
   logger.error(`Unhandled Exception: ${err.message}`, { stack: err.stack });
   res.status(500).json(createErrorResponse('INTERNAL_SERVER_ERROR', 'An unexpected error occurred in the Stellar Data Engine.'));
 }
-

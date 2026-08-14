@@ -1,6 +1,5 @@
 /**
- * Nolyvatix Express API Routes - Enterprise Alert & Notification Center API
- * Routes: CRUD, history, acknowledgment, stats, test-trigger, evaluate
+ * Nolyvatix Express API Routes - Alert & Webhook Center API
  */
 
 import { Router } from 'express';
@@ -9,48 +8,6 @@ import { sendSuccess, sendError } from '../middleware/responseWrapper.js';
 
 export function createAlertRouter(alertService: AlertService): Router {
   const router = Router();
-
-  // ─────────────────────────────────────────────
-  //  Stats (must come before /:id to prevent shadowing)
-  // ─────────────────────────────────────────────
-
-  // GET /api/alerts/stats
-  router.get('/stats', async (_req, res, next) => {
-    try {
-      const stats = await alertService.getAlertStats();
-      sendSuccess(res, stats);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // ─────────────────────────────────────────────
-  //  History (global)
-  // ─────────────────────────────────────────────
-
-  // GET /api/alerts/history
-  router.get('/history', async (_req, res, next) => {
-    try {
-      const history = await alertService.getAlertHistory();
-      sendSuccess(res, history);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // POST /api/alerts/history/:historyId/acknowledge
-  router.post('/history/:historyId/acknowledge', async (req, res, next) => {
-    try {
-      const entry = await alertService.acknowledgeAlert(req.params.historyId);
-      sendSuccess(res, entry);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // ─────────────────────────────────────────────
-  //  Alert Rules CRUD
-  // ─────────────────────────────────────────────
 
   // GET /api/alerts
   router.get('/', async (_req, res, next) => {
@@ -110,50 +67,11 @@ export function createAlertRouter(alertService: AlertService): Router {
     }
   });
 
-  // ─────────────────────────────────────────────
-  //  Alert-specific History & Actions
-  // ─────────────────────────────────────────────
-
-  // GET /api/alerts/:id/history
-  router.get('/:id/history', async (req, res, next) => {
-    try {
-      const history = await alertService.getAlertHistory(req.params.id);
-      sendSuccess(res, history);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // POST /api/alerts/:id/acknowledge-all
-  router.post('/:id/acknowledge-all', async (req, res, next) => {
-    try {
-      const count = await alertService.acknowledgeAllForAlert(req.params.id);
-      sendSuccess(res, { acknowledged: count, alertId: req.params.id });
-    } catch (err) {
-      next(err);
-    }
-  });
-
   // POST /api/alerts/:id/test-trigger
   router.post('/:id/test-trigger', async (req, res, next) => {
     try {
       const result = await alertService.testTriggerAlert(req.params.id);
       sendSuccess(res, result);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // POST /api/alerts/:id/evaluate
-  router.post('/:id/evaluate', async (req, res, next) => {
-    try {
-      const { currentValue } = req.body as { currentValue: number };
-      if (typeof currentValue !== 'number') {
-        sendError(res, 'currentValue (number) is required in request body', 400);
-        return;
-      }
-      const entry = await alertService.evaluateAndDispatch(req.params.id, currentValue);
-      sendSuccess(res, { breached: entry !== null, entry });
     } catch (err) {
       next(err);
     }

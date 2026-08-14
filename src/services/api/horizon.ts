@@ -2,8 +2,6 @@
  * Nolyvatix Frontend API Client - Connects strictly to Sprint 2 Express Backend (/api/*)
  */
 
-import { useAppStore } from '../../store/useAppStore';
-
 export interface NetworkHealthResponse {
   status: 'healthy' | 'degraded' | 'down';
   network: 'mainnet' | 'testnet' | 'futurenet';
@@ -30,58 +28,38 @@ export class BackendApiClient {
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     const startTime = performance.now();
-    try {
-      const res = await fetch(`${this.baseUrl}${endpoint}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options?.headers,
-        },
-        ...options,
-      });
+    const res = await fetch(`${this.baseUrl}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    });
 
-      const endTime = performance.now();
-      const latency = Math.round(endTime - startTime);
+    const endTime = performance.now();
+    const latency = Math.round(endTime - startTime);
 
-      if (!res.ok) {
-        let errorMsg = `API Error ${res.status}: ${res.statusText}`;
-        try {
-          const errJson = await res.json();
-          if (errJson.error?.message) {
-            errorMsg = errJson.error.message;
-          }
-        } catch (_) {}
-
-        // If backend server returns server error or offline status, notify store of fallback mode
-        if (res.status >= 500 || res.status === 502 || res.status === 503 || res.status === 504) {
-          useAppStore.getState().setFallbackMode(
-            true,
-            `Express backend endpoint '${endpoint}' returned ${res.status}. Showing cached fallback data.`
-          );
+    if (!res.ok) {
+      let errorMsg = `API Error ${res.status}: ${res.statusText}`;
+      try {
+        const errJson = await res.json();
+        if (errJson.error?.message) {
+          errorMsg = errJson.error.message;
         }
-        throw new Error(errorMsg);
-      }
-
-      const json = await res.json();
-      if (json.success === false) {
-        throw new Error(json.error?.message || 'API request failed');
-      }
-
-      // Backend request succeeded cleanly — restore live state if previously in fallback mode
-      useAppStore.getState().setFallbackMode(false);
-
-      if (json.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
-        json.data._latencyMs = latency;
-      }
-
-      return json.data as T;
-    } catch (err) {
-      // Network fetch error or connection refused — backend service unavailable
-      useAppStore.getState().setFallbackMode(
-        true,
-        'Live Express backend services are currently unreachable. Displaying cached demo data.'
-      );
-      throw err;
+      } catch (_) {}
+      throw new Error(errorMsg);
     }
+
+    const json = await res.json();
+    if (json.success === false) {
+      throw new Error(json.error?.message || 'API request failed');
+    }
+
+    if (json.data && typeof json.data === 'object' && !Array.isArray(json.data)) {
+      json.data._latencyMs = latency;
+    }
+
+    return json.data as T;
   }
 
   // Network Health

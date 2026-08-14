@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { WorkspaceHeader } from '../components/layout/WorkspaceHeader';
 import { ExecutiveKpiGrid } from '../components/network/ExecutiveKpiGrid';
 import { LiveLedgerFeed } from '../components/network/LiveLedgerFeed';
@@ -16,10 +16,10 @@ import {
   useSwitchNetworkMutation,
 } from '../hooks/useNetworkData';
 import { useAppStore } from '../store/useAppStore';
-import { AlertTriangle, RefreshCw, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Layers, ShieldCheck } from 'lucide-react';
 
 export const CommandCenterView: React.FC = () => {
-  const stellarNetwork = useAppStore((s) => s.stellarNetwork);
+  const { stellarNetwork } = useAppStore();
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(5);
   const [timeRange, setTimeRange] = useState<'1H' | '6H' | '24H' | '7D'>('1H');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -51,20 +51,17 @@ export const CommandCenterView: React.FC = () => {
 
   const switchNetworkMutation = useSwitchNetworkMutation();
 
-  const handleRefreshAll = useCallback(() => {
+  const handleRefreshAll = () => {
     refetchHealth();
     refetchSoroban();
     refetchLedgers();
-  }, [refetchHealth, refetchSoroban, refetchLedgers]);
+  };
 
-  const handleSwitchNetwork = useCallback(
-    (network: 'mainnet' | 'testnet' | 'futurenet') => {
-      switchNetworkMutation.mutate(network);
-    },
-    [switchNetworkMutation]
-  );
+  const handleSwitchNetwork = (network: 'mainnet' | 'testnet' | 'futurenet') => {
+    switchNetworkMutation.mutate(network);
+  };
 
-  const handleExportCsv = useCallback(() => {
+  const handleExportCsv = () => {
     if (!ledgers || ledgers.length === 0) return;
 
     const headers = ['Sequence', 'Closed At', 'Tx Count', 'Failed Txs', 'Operation Count', 'Base Fee (stroops)', 'Hash'];
@@ -87,15 +84,7 @@ export const CommandCenterView: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }, [ledgers, stellarNetwork]);
-
-  const handleSelectLedger = useCallback((seq: number) => {
-    setSelectedLedgerSeq(seq);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setSelectedLedgerSeq(null);
-  }, []);
+  };
 
   return (
     <div className="space-y-6">
@@ -165,7 +154,7 @@ export const CommandCenterView: React.FC = () => {
             onRefresh={refetchLedgers}
             autoRefreshInterval={autoRefreshInterval}
             setAutoRefreshInterval={setAutoRefreshInterval}
-            onSelectLedger={handleSelectLedger}
+            onSelectLedger={(seq) => setSelectedLedgerSeq(seq)}
           />
         </div>
       </div>
@@ -203,7 +192,7 @@ export const CommandCenterView: React.FC = () => {
       {/* Ledger Detail Inspection Modal */}
       <LedgerDetailModal
         sequence={selectedLedgerSeq}
-        onClose={handleCloseModal}
+        onClose={() => setSelectedLedgerSeq(null)}
       />
     </div>
   );

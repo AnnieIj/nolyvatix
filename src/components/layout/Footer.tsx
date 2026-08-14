@@ -7,8 +7,8 @@ export const Footer: React.FC = () => {
   const { networkTelemetry, stellarNetwork } = useAppStore();
 
   return (
-    <footer role="contentinfo" className="h-9 border-t border-zinc-800/80 bg-zinc-950 px-4 flex items-center justify-between text-[11px] font-mono text-zinc-400 select-none">
-      <div role="status" aria-live="polite" aria-label="Network status" className="flex items-center gap-4">
+    <footer className="h-9 border-t border-zinc-800/80 bg-zinc-950 px-4 flex items-center justify-between text-[11px] font-mono text-zinc-400 select-none">
+      <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5">
           <StatusChip status={networkTelemetry.horizonStatus} label={`HORIZON REST (${stellarNetwork.toUpperCase()})`} />
         </div>
@@ -29,11 +29,10 @@ export const Footer: React.FC = () => {
           href="https://stellar.org"
           target="_blank"
           rel="noreferrer"
-          aria-label="Stellar Ecosystem website (opens in new tab)"
-          className="hover:text-white transition-colors flex items-center gap-1 text-sky-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded"
+          className="hover:text-white transition-colors flex items-center gap-1 text-sky-400"
         >
           <span>Stellar Ecosystem</span>
-          <ExternalLink className="w-3 h-3" aria-hidden="true" />
+          <ExternalLink className="w-3 h-3" />
         </a>
       </div>
     </footer>

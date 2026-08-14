@@ -1,6 +1,5 @@
 /**
- * Nolyvatix Express API Routes - Universal Search Intelligence API
- * Routes: unified search, search history
+ * Nolyvatix Express API Routes - Universal Search Center API
  */
 
 import { Router } from 'express';
@@ -16,16 +15,6 @@ export function createSearchRouter(searchService: SearchService): Router {
       const query = (req.query.q as string) || '';
       const results = await searchService.universalSearch(query);
       sendSuccess(res, results);
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // GET /api/search/history — recent search queries from workspace
-  router.get('/history', async (_req, res, next) => {
-    try {
-      const history = await searchService.getSearchHistory();
-      sendSuccess(res, history);
     } catch (err) {
       next(err);
     }

@@ -9,7 +9,7 @@ import { Logger } from '../utils/logger.js';
 const logger = new Logger('SorobanClient');
 
 const SOROBAN_RPC_ENDPOINTS: Record<NetworkType, string> = {
-  mainnet: 'https://mainnet.soroban.stellar.org',
+  mainnet: 'https://soroban-testnet.stellar.org',
   testnet: 'https://soroban-testnet.stellar.org',
   futurenet: 'https://rpc-futurenet.stellar.org',
 };

@@ -28,16 +28,15 @@ export const WorkspaceHubView: React.FC = () => {
 
   const fetchWorkspace = async () => {
     try {
-      const res = await fetch('/api/workspaces/active');
+      const res = await fetch('/api/workspaces');
       if (res.ok) {
         const json = await res.json();
-        setWorkspace(json.data?.workspace || json.data);
+        setWorkspace(json.data);
       }
     } catch (err) {
       console.error('Failed to fetch workspace:', err);
     }
   };
-
 
   const handleTogglePin = async (category: 'dashboards' | 'assets' | 'wallets' | 'contracts', itemId: string) => {
     try {
@@ -48,7 +47,7 @@ export const WorkspaceHubView: React.FC = () => {
       });
       if (res.ok) {
         const json = await res.json();
-        setWorkspace(json.data?.workspace || json.data);
+        setWorkspace(json.data);
       }
     } catch (err) {
       console.error('Failed to toggle pin:', err);
@@ -73,11 +72,7 @@ export const WorkspaceHubView: React.FC = () => {
         </div>
       </div>
 
-      {!workspace ? (
-        <GlassCard className="p-10 text-center text-zinc-500 font-mono text-sm">
-          Loading workspace data...
-        </GlassCard>
-      ) : (
+      {workspace && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 font-mono text-xs">
           {/* Favorite Dashboards */}
           <GlassCard className="p-5 space-y-4 border-sky-500/20">
@@ -90,9 +85,7 @@ export const WorkspaceHubView: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              {workspace.favoriteDashboards.length === 0 ? (
-                <p className="text-zinc-600 text-center py-4">No dashboards pinned yet.<br/>Pin a dashboard from the Dashboard Builder.</p>
-              ) : workspace.favoriteDashboards.map((dashId) => (
+              {workspace.favoriteDashboards.map((dashId) => (
                 <div
                   key={dashId}
                   className="p-3 bg-zinc-950 border border-zinc-800/80 rounded-lg flex items-center justify-between hover:border-sky-500/40 transition-colors"
@@ -126,9 +119,7 @@ export const WorkspaceHubView: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              {workspace.recentReports.length === 0 ? (
-                <p className="text-zinc-600 text-center py-4">No recent reports.<br/>Generate a report from the Report Builder.</p>
-              ) : workspace.recentReports.map((repId) => (
+              {workspace.recentReports.map((repId) => (
                 <div
                   key={repId}
                   className="p-3 bg-zinc-950 border border-zinc-800/80 rounded-lg flex items-center justify-between hover:border-emerald-500/40 transition-colors"
@@ -159,9 +150,7 @@ export const WorkspaceHubView: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              {workspace.savedAIConversations.length === 0 ? (
-                <p className="text-zinc-600 text-center py-4">No saved AI conversations.<br/>Save a chat from the Gemini AI Copilot.</p>
-              ) : workspace.savedAIConversations.map((chat) => (
+              {workspace.savedAIConversations.map((chat) => (
                 <div
                   key={chat.id}
                   className="p-3 bg-zinc-950 border border-zinc-800/80 rounded-lg flex items-center justify-between hover:border-purple-500/40 transition-colors"
