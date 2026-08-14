@@ -17,6 +17,8 @@ export function createSuccessResponse<T>(data: T): ApiResponse<T> {
   };
 }
 
+export const formatSuccessResponse = createSuccessResponse;
+
 export function createPaginatedResponse<T>(
   data: T[],
   pagination: {

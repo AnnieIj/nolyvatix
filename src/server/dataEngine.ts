@@ -1,11 +1,24 @@
 /**
  * Nolyvatix Stellar Data Engine - Main DI Container & Application Initializer
+ * Wires Repositories, Services, Event Bus, SSE Streamer, and Express Routers.
  */
 
 import { Router } from 'express';
 import { defaultHorizonClient, HorizonClient } from './clients/horizonClient.js';
 import { defaultSorobanClient, SorobanClient } from './clients/sorobanClient.js';
 import { globalCache, MemoryCache } from './cache/memoryCache.js';
+import { globalStellarCache, StellarCache } from './cache/stellarCache.js';
+
+// Stellar Live Service Layer
+import {
+  StellarHorizonClient,
+  StellarSorobanClient,
+  StellarAssetService,
+  StellarWalletService,
+  StellarLiquidityService,
+  StellarAnalyticsService,
+  StellarEventBus,
+} from './services/stellar/index.js';
 
 import { LedgerRepository } from './repositories/ledgerRepository.js';
 import { TransactionRepository } from './repositories/transactionRepository.js';
@@ -46,6 +59,8 @@ import { createAlertRouter } from './routes/alertRoutes.js';
 import { createWorkspaceRouter } from './routes/workspaceRoutes.js';
 import { createSearchRouter } from './routes/searchRoutes.js';
 import { createSettingsRouter } from './routes/settingsRoutes.js';
+import { createStreamRouter } from './routes/streamRoutes.js';
+import { createHealthRouter } from './routes/healthRoutes.js';
 import { Logger } from './utils/logger.js';
 
 const logger = new Logger('DataEngine');
@@ -54,6 +69,8 @@ export interface DataEngineInstance {
   horizonClient: HorizonClient;
   sorobanClient: SorobanClient;
   cache: MemoryCache;
+  stellarCache: StellarCache;
+  eventBus: StellarEventBus;
   repositories: {
     ledger: LedgerRepository;
     transaction: TransactionRepository;
@@ -79,6 +96,10 @@ export interface DataEngineInstance {
     workspace: WorkspaceService;
     search: SearchService;
     settings: SettingsService;
+    stellarAsset: StellarAssetService;
+    stellarWallet: StellarWalletService;
+    stellarLiquidity: StellarLiquidityService;
+    stellarAnalytics: StellarAnalyticsService;
   };
   apiRouter: Router;
 }
@@ -88,13 +109,41 @@ export function initializeDataEngine(
   customSorobanClient?: SorobanClient,
   customCache?: MemoryCache
 ): DataEngineInstance {
-  logger.info('Initializing Nolyvatix Stellar Data Engine...');
+  logger.info('Initializing Nolyvatix Stellar Production Data Engine...');
 
   const horizonClient = customHorizonClient || defaultHorizonClient;
   const sorobanClient = customSorobanClient || defaultSorobanClient;
   const cache = customCache || globalCache;
+  const stellarCache = globalStellarCache;
 
-  // Initialize Repositories
+  // Initialize Stellar Live Service Layer components
+  const stellarHorizonClient = new StellarHorizonClient({
+    network: horizonClient.getNetwork(),
+  });
+  const stellarSorobanClient = new StellarSorobanClient({
+    network: sorobanClient.getNetwork(),
+  });
+
+  const stellarAssetService = new StellarAssetService(stellarHorizonClient, stellarCache);
+  const stellarWalletService = new StellarWalletService(stellarHorizonClient, stellarCache);
+  const stellarLiquidityService = new StellarLiquidityService(stellarHorizonClient, stellarCache);
+  const stellarAnalyticsService = new StellarAnalyticsService(
+    stellarHorizonClient,
+    stellarSorobanClient,
+    stellarCache
+  );
+
+  // Initialize Real-time Event Bus & SSE Manager
+  const eventBus = new StellarEventBus(
+    stellarAnalyticsService,
+    stellarAssetService,
+    stellarLiquidityService,
+    stellarHorizonClient,
+    stellarSorobanClient,
+    stellarCache
+  );
+
+  // Initialize Classic Repositories
   const ledgerRepo = new LedgerRepository(horizonClient, cache);
   const txRepo = new TransactionRepository(horizonClient, cache);
   const opRepo = new OperationRepository(horizonClient, cache);
@@ -103,7 +152,7 @@ export function initializeDataEngine(
   const poolRepo = new LiquidityPoolRepository(horizonClient, cache);
   const sorobanRepo = new SorobanRepository(sorobanClient, cache);
 
-  // Initialize Services
+  // Initialize Domain Services
   const ledgerService = new LedgerService(ledgerRepo);
   const txService = new TransactionService(txRepo);
   const opService = new OperationService(opRepo);
@@ -133,6 +182,13 @@ export function initializeDataEngine(
   // Initialize Main API Router
   const apiRouter = Router();
 
+  // System Health & Diagnostics
+  apiRouter.use('/health', createHealthRouter(stellarHorizonClient, stellarSorobanClient, stellarCache, eventBus));
+
+  // Real-Time Server-Sent Events (SSE)
+  apiRouter.use('/stream', createStreamRouter(eventBus));
+
+  // Domain Routes
   apiRouter.use('/network', createNetworkRouter(networkService));
   apiRouter.use('/ledgers', createLedgerRouter(ledgerService, txService, opService));
   apiRouter.use('/transactions', createTransactionRouter(txService, opService));
@@ -149,12 +205,14 @@ export function initializeDataEngine(
   apiRouter.use('/search', createSearchRouter(searchService));
   apiRouter.use('/settings', createSettingsRouter(settingsService));
 
-  logger.info('Stellar Data Engine successfully initialized with all services & routes.');
+  logger.info('Stellar Production Data Engine successfully initialized with Event Bus, SSE, and all routes.');
 
   return {
     horizonClient,
     sorobanClient,
     cache,
+    stellarCache,
+    eventBus,
     repositories: {
       ledger: ledgerRepo,
       transaction: txRepo,
@@ -180,6 +238,10 @@ export function initializeDataEngine(
       workspace: workspaceService,
       search: searchService,
       settings: settingsService,
+      stellarAsset: stellarAssetService,
+      stellarWallet: stellarWalletService,
+      stellarLiquidity: stellarLiquidityService,
+      stellarAnalytics: stellarAnalyticsService,
     },
     apiRouter,
   };

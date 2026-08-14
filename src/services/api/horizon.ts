@@ -252,6 +252,26 @@ export class BackendApiClient {
   async getAccountAnalytics(accountId: string): Promise<any> {
     return this.request<any>(`/accounts/${accountId}/analytics`);
   }
+
+  // System Diagnostics & Health Telemetry
+  async getDetailedHealthMetrics(): Promise<any> {
+    return this.request<any>('/health/detailed');
+  }
+
+  // Network Analytics
+  async getNetworkAnalytics(): Promise<any> {
+    return this.request<any>('/network/analytics');
+  }
+
+  // Corridors
+  async getCorridors(): Promise<any[]> {
+    return this.request<any[]>('/assets/corridors');
+  }
+
+  // SSE Stream URL Helper
+  getStreamUrl(topics: string[] = ['all']): string {
+    return `/api/stream/events?topics=${topics.join(',')}`;
+  }
 }
 
 export const backendApiClient = new BackendApiClient();

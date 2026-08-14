@@ -180,27 +180,29 @@ export interface StellarAccount {
 }
 
 export interface StellarAsset {
-  assetType: 'credit_alphanum4' | 'credit_alphanum12';
+  id?: string;
+  assetType: 'native' | 'credit_alphanum4' | 'credit_alphanum12';
   assetCode: string;
-  assetIssuer: string;
+  assetIssuer?: string;
   pagingToken: string;
   numAccounts: number;
-  numClaimableBalances: number;
-  numLiquidityPools: number;
+  numClaimableBalances?: number;
+  numLiquidityPools?: number;
   amount: string;
-  accounts: {
+  accounts?: {
     authorized: number;
     authorizedToMaintainLiabilities: number;
     unauthorized: number;
   };
-  claimableBalancesAmount: string;
-  liquidityPoolsAmount: string;
+  claimableBalancesAmount?: string;
+  liquidityPoolsAmount?: string;
   flags: {
     authRequired: boolean;
     authRevocable: boolean;
     authImmutable: boolean;
     authClawbackEnabled: boolean;
   };
+  isVerified?: boolean;
 }
 
 export interface StellarLiquidityPool {

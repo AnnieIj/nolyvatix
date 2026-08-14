@@ -24,7 +24,7 @@ interface AppStore {
   toggleAICopilot: () => void;
   setActiveRoute: (route: NavRoute) => void;
   setStellarNetwork: (network: StellarNetwork) => void;
-  setNetworkTelemetry: (telemetry: NetworkTelemetry) => void;
+  setNetworkTelemetry: (telemetry: Partial<NetworkTelemetry>) => void;
   connectMockWallet: (walletName?: string) => void;
   disconnectWallet: () => void;
 }
@@ -88,7 +88,8 @@ export const useAppStore = create<AppStore>((set) => ({
 
   setActiveRoute: (activeRoute) => set({ activeRoute }),
   setStellarNetwork: (stellarNetwork) => set({ stellarNetwork }),
-  setNetworkTelemetry: (networkTelemetry) => set({ networkTelemetry }),
+  setNetworkTelemetry: (telemetry) =>
+    set((state) => ({ networkTelemetry: { ...state.networkTelemetry, ...telemetry } })),
 
   connectMockWallet: (walletName = 'Freighter') => {
     set({
