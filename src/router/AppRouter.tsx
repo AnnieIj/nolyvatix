@@ -62,7 +62,7 @@ const OfflineView = lazy(() =>
 );
 
 export const AppRouter: React.FC = () => {
-  const { activeRoute, setActiveRoute } = useAppStore();
+  const activeRoute = useAppStore((state) => state.activeRoute);
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   // Online / Offline connectivity listener
@@ -79,39 +79,42 @@ export const AppRouter: React.FC = () => {
     };
   }, []);
 
-  // Deep linking and browser history synchronization with URL Hash
+  // Listen to browser URL hash changes (back/forward buttons, manual URL entry)
   useEffect(() => {
     const handleHashChange = () => {
       const currentHash = window.location.hash;
       const targetRoute = resolveRoute(currentHash);
       
-      if (targetRoute !== activeRoute) {
-        setActiveRoute(targetRoute);
+      const currentRoute = useAppStore.getState().activeRoute;
+      if (targetRoute !== currentRoute) {
+        useAppStore.getState().setActiveRoute(targetRoute);
       }
     };
 
     window.addEventListener('hashchange', handleHashChange);
     
-    // Initial check on mount
+    // Initial sync on mount
     if (window.location.hash) {
       handleHashChange();
     } else {
-      window.location.hash = `#/command-center`;
+      const initialRoute = useAppStore.getState().activeRoute || 'command-center';
+      window.location.hash = `#/${initialRoute}`;
     }
 
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [setActiveRoute, activeRoute]);
+  }, []); // Run ONLY once on mount to avoid infinite state update loop
 
-  // Update hash when activeRoute changes from in-app navigation
+  // Update hash and document title when activeRoute changes
   useEffect(() => {
     const expectedHash = `#/${activeRoute}`;
     if (window.location.hash !== expectedHash) {
       window.location.hash = expectedHash;
     }
 
-    // Set document title for accessibility and browser tabs
     const config = getRouteConfig(activeRoute);
-    document.title = `${config.label} | NovaSQL Stellar BI`;
+    if (config) {
+      document.title = `${config.label} | NovaSQL Stellar BI`;
+    }
   }, [activeRoute]);
 
   if (!isOnline && activeRoute !== 'offline') {

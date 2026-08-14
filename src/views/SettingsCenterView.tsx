@@ -192,7 +192,7 @@ export const SettingsCenterView: React.FC = () => {
               <label className="block text-zinc-400 mb-1">Default BI Export Package</label>
               <select
                 value={settings.exportFormatDefault}
-                onChange={(e) => setSettings({ ...settings, exportFormatDefault: e.target.value })}
+                onChange={(e) => setSettings({ ...settings, exportFormatDefault: e.target.value as any })}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-zinc-200 focus:outline-none focus:border-sky-500"
               >
                 <option value="pdf">Adobe PDF Executive Report</option>

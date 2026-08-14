@@ -150,6 +150,7 @@ export interface AIChatMessage {
     xAxisKey?: string;
     dataKeys?: string[];
   };
+  suggestedFollowups?: string[];
   anomalyDetected?: boolean;
 }
 

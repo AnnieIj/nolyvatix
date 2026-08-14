@@ -23,10 +23,10 @@ export const GeminiAICopilotDrawer: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Keyboard Shortcuts: Alt+A or Cmd+K to toggle AI Copilot, Esc to close
+  // Keyboard Shortcuts: Alt+A to toggle AI Copilot, Esc to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.altKey && e.key.toLowerCase() === 'a') || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k')) {
+      if (e.altKey && e.key.toLowerCase() === 'a') {
         e.preventDefault();
         toggleAICopilot();
       }

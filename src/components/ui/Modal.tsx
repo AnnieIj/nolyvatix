@@ -10,6 +10,7 @@ export interface ModalProps {
   subtitle?: string;
   children: React.ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   className?: string;
 }
 
@@ -19,9 +20,11 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   subtitle,
   children,
-  maxWidth = 'md',
+  maxWidth,
+  size = 'md',
   className,
 }) => {
+  const activeWidth = maxWidth || size;
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -62,7 +65,7 @@ export const Modal: React.FC<ModalProps> = ({
             transition={{ duration: 0.15, ease: 'easeOut' }}
             className={cn(
               'relative w-full glass-card border border-zinc-700/80 rounded-xl shadow-2xl overflow-hidden z-10 text-zinc-100',
-              maxWidths[maxWidth],
+              maxWidths[activeWidth],
               className
             )}
           >
