@@ -1,17 +1,23 @@
 /**
  * Nolyvatix Data Engine - Custom Dashboard Service
  * Manages custom drag-and-drop dashboards, widgets, pinning, and layouts
+ * Backed by Cloud SQL PostgreSQL with seamless in-memory fallback
  */
 
-import { CustomDashboard, WidgetConfig, WidgetType } from '../../types/index.js';
-import { Logger } from '../utils/logger.js';
+import { CustomDashboard } from '../../types/index.ts';
+import { Logger } from '../utils/logger.ts';
+import { DashboardDbRepository } from '../repositories/db/dashboardDbRepository.ts';
+import { UserDbRepository } from '../repositories/db/userDbRepository.ts';
 
 const logger = new Logger('DashboardService');
 
 export class DashboardService {
-  private dashboards: Map<string, CustomDashboard> = new Map();
+  private inMemoryDashboards: Map<string, CustomDashboard> = new Map();
 
-  constructor() {
+  constructor(
+    private dashboardRepo: DashboardDbRepository = new DashboardDbRepository(),
+    private userRepo: UserDbRepository = new UserDbRepository()
+  ) {
     this.seedDefaultDashboards();
   }
 
@@ -147,19 +153,45 @@ export class DashboardService {
       },
     ];
 
-    defaultDashboards.forEach((d) => this.dashboards.set(d.id, d));
+    defaultDashboards.forEach((d) => this.inMemoryDashboards.set(d.id, d));
     logger.info(`Seeded ${defaultDashboards.length} initial default dashboards.`);
   }
 
   async getAllDashboards(): Promise<CustomDashboard[]> {
-    return Array.from(this.dashboards.values()).sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+    try {
+      const user = await this.userRepo.getOrCreateDefaultUser();
+      const dbDashboards = await this.dashboardRepo.getAllDashboards(user.id);
+      if (dbDashboards && dbDashboards.length > 0) {
+        return dbDashboards;
+      }
+    } catch (e) {
+      logger.error('Error querying dashboards from DB, falling back to memory', e);
+    }
+    return Array.from(this.inMemoryDashboards.values()).sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
   }
 
   async getDashboardById(id: string): Promise<CustomDashboard | null> {
-    return this.dashboards.get(id) || null;
+    try {
+      const fromDb = await this.dashboardRepo.getDashboardById(id);
+      if (fromDb) return fromDb;
+    } catch (e) {
+      logger.error(`Error querying dashboard ${id} from DB, checking memory`, e);
+    }
+    return this.inMemoryDashboards.get(id) || null;
   }
 
   async createDashboard(data: Partial<CustomDashboard>): Promise<CustomDashboard> {
+    try {
+      const user = await this.userRepo.getOrCreateDefaultUser();
+      const created = await this.dashboardRepo.createDashboard(user.id, data);
+      if (created) {
+        this.inMemoryDashboards.set(created.id, created);
+        return created;
+      }
+    } catch (e) {
+      logger.error('Failed to create dashboard in DB, creating in memory', e);
+    }
+
     const id = `dash-${Date.now()}`;
     const newDashboard: CustomDashboard = {
       id,
@@ -187,13 +219,23 @@ export class DashboardService {
       ],
     };
 
-    this.dashboards.set(id, newDashboard);
+    this.inMemoryDashboards.set(id, newDashboard);
     logger.info(`Created new dashboard: ${newDashboard.id} (${newDashboard.title})`);
     return newDashboard;
   }
 
   async updateDashboard(id: string, updates: Partial<CustomDashboard>): Promise<CustomDashboard> {
-    const existing = this.dashboards.get(id);
+    try {
+      const updatedInDb = await this.dashboardRepo.updateDashboard(id, updates);
+      if (updatedInDb) {
+        this.inMemoryDashboards.set(id, updatedInDb);
+        return updatedInDb;
+      }
+    } catch (e) {
+      logger.error(`Failed to update dashboard ${id} in DB`, e);
+    }
+
+    const existing = this.inMemoryDashboards.get(id);
     if (!existing) {
       throw new Error(`Dashboard ${id} not found`);
     }
@@ -204,13 +246,18 @@ export class DashboardService {
       updatedAt: new Date().toISOString(),
     };
 
-    this.dashboards.set(id, updated);
-    logger.info(`Updated dashboard: ${id}`);
+    this.inMemoryDashboards.set(id, updated);
+    logger.info(`Updated dashboard in memory: ${id}`);
     return updated;
   }
 
   async deleteDashboard(id: string): Promise<boolean> {
-    const deleted = this.dashboards.delete(id);
+    try {
+      await this.dashboardRepo.deleteDashboard(id);
+    } catch (e) {
+      logger.error(`Failed to delete dashboard ${id} from DB`, e);
+    }
+    const deleted = this.inMemoryDashboards.delete(id);
     if (deleted) {
       logger.info(`Deleted dashboard: ${id}`);
     }
@@ -218,35 +265,26 @@ export class DashboardService {
   }
 
   async duplicateDashboard(id: string): Promise<CustomDashboard> {
-    const existing = this.dashboards.get(id);
+    const existing = await this.getDashboardById(id);
     if (!existing) {
       throw new Error(`Dashboard ${id} not found`);
     }
 
-    const duplicated: CustomDashboard = {
-      ...existing,
-      id: `dash-copy-${Date.now()}`,
+    return this.createDashboard({
       title: `${existing.title} (Copy)`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      description: existing.description,
+      isPinned: existing.isPinned,
+      isPublic: existing.isPublic,
       widgets: existing.widgets.map((w, idx) => ({ ...w, id: `w-dup-${Date.now()}-${idx}` })),
-    };
-
-    this.dashboards.set(duplicated.id, duplicated);
-    logger.info(`Duplicated dashboard ${id} -> ${duplicated.id}`);
-    return duplicated;
+    });
   }
 
   async togglePinDashboard(id: string): Promise<CustomDashboard> {
-    const existing = this.dashboards.get(id);
+    const existing = await this.getDashboardById(id);
     if (!existing) {
       throw new Error(`Dashboard ${id} not found`);
     }
 
-    existing.isPinned = !existing.isPinned;
-    existing.updatedAt = new Date().toISOString();
-    this.dashboards.set(id, existing);
-    logger.info(`Toggled pin state for dashboard ${id}: ${existing.isPinned}`);
-    return existing;
+    return this.updateDashboard(id, { isPinned: !existing.isPinned });
   }
 }

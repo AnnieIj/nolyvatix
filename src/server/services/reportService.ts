@@ -1,25 +1,30 @@
 /**
  * Nolyvatix Data Engine - Report Builder Service
  * Generates enterprise analytical reports (Daily, Weekly, Monthly, Custom) with PDF/CSV/JSON/Markdown exports
+ * Backed by Cloud SQL PostgreSQL with seamless in-memory fallback
  */
 
-import { BIReport } from '../../types/index.js';
-import { Logger } from '../utils/logger.js';
-import { NetworkService } from './networkService.js';
-import { AssetService } from './assetService.js';
-import { LiquidityPoolService } from './liquidityPoolService.js';
-import { SorobanService } from './sorobanService.js';
+import { BIReport } from '../../types/index.ts';
+import { Logger } from '../utils/logger.ts';
+import { NetworkService } from './networkService.ts';
+import { AssetService } from './assetService.ts';
+import { LiquidityPoolService } from './liquidityPoolService.ts';
+import { SorobanService } from './sorobanService.ts';
+import { ReportDbRepository } from '../repositories/db/reportDbRepository.ts';
+import { UserDbRepository } from '../repositories/db/userDbRepository.ts';
 
 const logger = new Logger('ReportService');
 
 export class ReportService {
-  private savedReports: Map<string, BIReport> = new Map();
+  private inMemorySavedReports: Map<string, BIReport> = new Map();
 
   constructor(
     private networkService: NetworkService,
     private assetService: AssetService,
     private poolService: LiquidityPoolService,
-    private sorobanService: SorobanService
+    private sorobanService: SorobanService,
+    private reportRepo: ReportDbRepository = new ReportDbRepository(),
+    private userRepo: UserDbRepository = new UserDbRepository()
   ) {
     this.seedInitialReports();
   }
@@ -89,17 +94,32 @@ export class ReportService {
       },
     };
 
-    this.savedReports.set(initialReport.id, initialReport);
+    this.inMemorySavedReports.set(initialReport.id, initialReport);
   }
 
   async getAllReports(): Promise<BIReport[]> {
-    return Array.from(this.savedReports.values()).sort(
+    try {
+      const user = await this.userRepo.getOrCreateDefaultUser();
+      const dbReports = await this.reportRepo.getAllReports(user.id);
+      if (dbReports && dbReports.length > 0) {
+        return dbReports;
+      }
+    } catch (e) {
+      logger.error('Error querying reports from DB, checking memory', e);
+    }
+    return Array.from(this.inMemorySavedReports.values()).sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }
 
   async getReportById(id: string): Promise<BIReport | null> {
-    return this.savedReports.get(id) || null;
+    try {
+      const fromDb = await this.reportRepo.getReportById(id);
+      if (fromDb) return fromDb;
+    } catch (e) {
+      logger.error(`Error querying report ${id} from DB, checking memory`, e);
+    }
+    return this.inMemorySavedReports.get(id) || null;
   }
 
   async generateReport(params: {
@@ -186,13 +206,24 @@ export class ReportService {
       },
     };
 
-    this.savedReports.set(newReport.id, newReport);
+    try {
+      const user = await this.userRepo.getOrCreateDefaultUser();
+      const savedInDb = await this.reportRepo.createReport(user.id, newReport);
+      if (savedInDb) {
+        this.inMemorySavedReports.set(savedInDb.id, savedInDb);
+        return savedInDb;
+      }
+    } catch (e) {
+      logger.error('Failed to save report to DB, using in-memory', e);
+    }
+
+    this.inMemorySavedReports.set(newReport.id, newReport);
     logger.info(`Generated new BI report: ${newReport.id} (${newReport.title})`);
     return newReport;
   }
 
   async exportReport(id: string, format: 'pdf' | 'csv' | 'json' | 'markdown'): Promise<{ filename: string; contentType: string; data: string }> {
-    const report = this.savedReports.get(id);
+    const report = await this.getReportById(id);
     if (!report) {
       throw new Error(`Report ${id} not found`);
     }

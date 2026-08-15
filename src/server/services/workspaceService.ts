@@ -1,15 +1,18 @@
 /**
  * Nolyvatix Data Engine - Workspace Management Service
  * Tracks user favorites, pinned entities, recent searches, and saved AI conversations
+ * Backed by Cloud SQL PostgreSQL with seamless in-memory fallback
  */
 
-import { UserWorkspace } from '../../types/index.js';
-import { Logger } from '../utils/logger.js';
+import { UserWorkspace } from '../../types/index.ts';
+import { Logger } from '../utils/logger.ts';
+import { WorkspaceDbRepository } from '../repositories/db/workspaceDbRepository.ts';
+import { UserDbRepository } from '../repositories/db/userDbRepository.ts';
 
 const logger = new Logger('WorkspaceService');
 
 export class WorkspaceService {
-  private workspace: UserWorkspace = {
+  private inMemoryWorkspace: UserWorkspace = {
     favoriteDashboards: ['dash-mainnet-overview', 'dash-soroban-apm'],
     recentReports: ['rep-default-24h'],
     savedAIConversations: [
@@ -22,16 +25,46 @@ export class WorkspaceService {
     recentSearches: ['USDC liquidity', 'Soroban WASM gas', 'GAAZI4TCR3TY5OJHCTJC', 'Ledger #52148900'],
   };
 
+  constructor(
+    private workspaceRepo: WorkspaceDbRepository = new WorkspaceDbRepository(),
+    private userRepo: UserDbRepository = new UserDbRepository()
+  ) {}
+
   async getWorkspace(): Promise<UserWorkspace> {
-    return this.workspace;
+    try {
+      const user = await this.userRepo.getOrCreateDefaultUser();
+      const dbWs = await this.workspaceRepo.getWorkspace(user.id);
+      if (dbWs) {
+        // Merge with memory defaults if empty
+        return {
+          favoriteDashboards: dbWs.favoriteDashboards.length > 0 ? dbWs.favoriteDashboards : this.inMemoryWorkspace.favoriteDashboards,
+          recentReports: dbWs.recentReports.length > 0 ? dbWs.recentReports : this.inMemoryWorkspace.recentReports,
+          savedAIConversations: this.inMemoryWorkspace.savedAIConversations,
+          pinnedAssets: dbWs.pinnedAssets.length > 0 ? dbWs.pinnedAssets : this.inMemoryWorkspace.pinnedAssets,
+          pinnedWallets: dbWs.pinnedWallets.length > 0 ? dbWs.pinnedWallets : this.inMemoryWorkspace.pinnedWallets,
+          pinnedContracts: dbWs.pinnedContracts.length > 0 ? dbWs.pinnedContracts : this.inMemoryWorkspace.pinnedContracts,
+          recentSearches: dbWs.recentSearches.length > 0 ? dbWs.recentSearches : this.inMemoryWorkspace.recentSearches,
+        };
+      }
+    } catch (e) {
+      logger.error('Error fetching workspace from DB, checking in-memory', e);
+    }
+    return this.inMemoryWorkspace;
   }
 
   async togglePin(category: 'dashboards' | 'assets' | 'wallets' | 'contracts', itemId: string): Promise<UserWorkspace> {
+    try {
+      const user = await this.userRepo.getOrCreateDefaultUser();
+      await this.workspaceRepo.togglePin(user.id, category, itemId);
+    } catch (e) {
+      logger.error(`Error toggling pin in DB for ${category}:${itemId}`, e);
+    }
+
     const listMap = {
-      dashboards: this.workspace.favoriteDashboards,
-      assets: this.workspace.pinnedAssets,
-      wallets: this.workspace.pinnedWallets,
-      contracts: this.workspace.pinnedContracts,
+      dashboards: this.inMemoryWorkspace.favoriteDashboards,
+      assets: this.inMemoryWorkspace.pinnedAssets,
+      wallets: this.inMemoryWorkspace.pinnedWallets,
+      contracts: this.inMemoryWorkspace.pinnedContracts,
     };
 
     const targetList = listMap[category];
@@ -44,15 +77,24 @@ export class WorkspaceService {
       logger.info(`Pinned ${category} item: ${itemId}`);
     }
 
-    return this.workspace;
+    return this.getWorkspace();
   }
 
   async addRecentSearch(query: string): Promise<UserWorkspace> {
-    if (!query.trim()) return this.workspace;
-    this.workspace.recentSearches = [
+    if (!query.trim()) return this.getWorkspace();
+
+    try {
+      const user = await this.userRepo.getOrCreateDefaultUser();
+      await this.workspaceRepo.addRecentSearch(user.id, query);
+    } catch (e) {
+      logger.error(`Error adding recent search in DB: ${query}`, e);
+    }
+
+    this.inMemoryWorkspace.recentSearches = [
       query.trim(),
-      ...this.workspace.recentSearches.filter((s) => s.toLowerCase() !== query.toLowerCase()),
+      ...this.inMemoryWorkspace.recentSearches.filter((s) => s.toLowerCase() !== query.toLowerCase()),
     ].slice(0, 10);
-    return this.workspace;
+
+    return this.getWorkspace();
   }
 }

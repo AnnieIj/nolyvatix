@@ -1,67 +1,76 @@
 /**
- * Nolyvatix Stellar Data Engine - Main DI Container & Application Initializer
- * Wires Repositories, Services, Event Bus, SSE Streamer, and Express Routers.
+ * Nolyvatix Production Data Engine & Dependency Injection Root
+ * Integrates Horizon, Soroban, High-Performance Multi-Layer Caching,
+ * Pub/Sub Event Bus for Real-Time SSE Streams, Cloud SQL PostgreSQL Repositories, and Business Analytics Services.
  */
 
 import { Router } from 'express';
-import { defaultHorizonClient, HorizonClient } from './clients/horizonClient.js';
-import { defaultSorobanClient, SorobanClient } from './clients/sorobanClient.js';
-import { globalCache, MemoryCache } from './cache/memoryCache.js';
-import { globalStellarCache, StellarCache } from './cache/stellarCache.js';
+import { HorizonClient, defaultHorizonClient } from './clients/horizonClient.ts';
+import { SorobanClient, defaultSorobanClient } from './clients/sorobanClient.ts';
+import { MemoryCache, globalCache } from './cache/memoryCache.ts';
+import { StellarCache, globalStellarCache } from './cache/stellarCache.ts';
 
-// Stellar Live Service Layer
-import {
-  StellarHorizonClient,
-  StellarSorobanClient,
-  StellarAssetService,
-  StellarWalletService,
-  StellarLiquidityService,
-  StellarAnalyticsService,
-  StellarEventBus,
-} from './services/stellar/index.js';
+// Specialized Live Clients & Services
+import { StellarHorizonClient, StellarSorobanClient } from './services/stellar/index.ts';
+import { StellarAssetService } from './services/stellar/stellarAssetService.ts';
+import { StellarWalletService } from './services/stellar/stellarWalletService.ts';
+import { StellarLiquidityService } from './services/stellar/stellarLiquidityService.ts';
+import { StellarAnalyticsService } from './services/stellar/stellarAnalyticsService.ts';
+import { StellarEventBus } from './services/stellar/stellarEventBus.ts';
 
-import { LedgerRepository } from './repositories/ledgerRepository.js';
-import { TransactionRepository } from './repositories/transactionRepository.js';
-import { OperationRepository } from './repositories/operationRepository.js';
-import { AccountRepository } from './repositories/accountRepository.js';
-import { AssetRepository } from './repositories/assetRepository.js';
-import { LiquidityPoolRepository } from './repositories/liquidityPoolRepository.js';
-import { SorobanRepository } from './repositories/sorobanRepository.js';
+// Blockchain Repositories
+import { LedgerRepository } from './repositories/ledgerRepository.ts';
+import { TransactionRepository } from './repositories/transactionRepository.ts';
+import { OperationRepository } from './repositories/operationRepository.ts';
+import { AccountRepository } from './repositories/accountRepository.ts';
+import { AssetRepository } from './repositories/assetRepository.ts';
+import { LiquidityPoolRepository } from './repositories/liquidityPoolRepository.ts';
+import { SorobanRepository } from './repositories/sorobanRepository.ts';
 
-import { LedgerService } from './services/ledgerService.js';
-import { TransactionService } from './services/transactionService.js';
-import { OperationService } from './services/operationService.js';
-import { AccountService } from './services/accountService.js';
-import { AssetService } from './services/assetService.js';
-import { LiquidityPoolService } from './services/liquidityPoolService.js';
-import { SorobanService } from './services/sorobanService.js';
-import { NetworkService } from './services/networkService.js';
-import { AiService } from './services/aiService.js';
-import { DashboardService } from './services/dashboardService.js';
-import { ReportService } from './services/reportService.js';
-import { AlertService } from './services/alertService.js';
-import { WorkspaceService } from './services/workspaceService.js';
-import { SearchService } from './services/searchService.js';
-import { SettingsService } from './services/settingsService.js';
+// Cloud SQL PostgreSQL Repositories
+import { UserDbRepository } from './repositories/db/userDbRepository.ts';
+import { DashboardDbRepository } from './repositories/db/dashboardDbRepository.ts';
+import { ReportDbRepository } from './repositories/db/reportDbRepository.ts';
+import { AlertDbRepository } from './repositories/db/alertDbRepository.ts';
+import { WorkspaceDbRepository } from './repositories/db/workspaceDbRepository.ts';
 
-import { createNetworkRouter } from './routes/networkRoutes.js';
-import { createLedgerRouter } from './routes/ledgerRoutes.js';
-import { createTransactionRouter } from './routes/transactionRoutes.js';
-import { createAccountRouter } from './routes/accountRoutes.js';
-import { createAssetRouter } from './routes/assetRoutes.js';
-import { createLiquidityPoolRouter } from './routes/liquidityPoolRoutes.js';
-import { createOperationRouter } from './routes/operationRoutes.js';
-import { createSorobanRouter } from './routes/sorobanRoutes.js';
-import { createAiRouter } from './routes/aiRoutes.js';
-import { createDashboardRouter } from './routes/dashboardRoutes.js';
-import { createReportRouter } from './routes/reportRoutes.js';
-import { createAlertRouter } from './routes/alertRoutes.js';
-import { createWorkspaceRouter } from './routes/workspaceRoutes.js';
-import { createSearchRouter } from './routes/searchRoutes.js';
-import { createSettingsRouter } from './routes/settingsRoutes.js';
-import { createStreamRouter } from './routes/streamRoutes.js';
-import { createHealthRouter } from './routes/healthRoutes.js';
-import { Logger } from './utils/logger.js';
+// Domain Services
+import { LedgerService } from './services/ledgerService.ts';
+import { TransactionService } from './services/transactionService.ts';
+import { OperationService } from './services/operationService.ts';
+import { AccountService } from './services/accountService.ts';
+import { AssetService } from './services/assetService.ts';
+import { LiquidityPoolService } from './services/liquidityPoolService.ts';
+import { SorobanService } from './services/sorobanService.ts';
+import { NetworkService } from './services/networkService.ts';
+import { AiService } from './services/aiService.ts';
+import { DashboardService } from './services/dashboardService.ts';
+import { ReportService } from './services/reportService.ts';
+import { AlertService } from './services/alertService.ts';
+import { WorkspaceService } from './services/workspaceService.ts';
+import { SearchService } from './services/searchService.ts';
+import { SettingsService } from './services/settingsService.ts';
+
+// API Route Creators
+import { createHealthRouter } from './routes/healthRoutes.ts';
+import { createStreamRouter } from './routes/streamRoutes.ts';
+import { createNetworkRouter } from './routes/networkRoutes.ts';
+import { createLedgerRouter } from './routes/ledgerRoutes.ts';
+import { createTransactionRouter } from './routes/transactionRoutes.ts';
+import { createAccountRouter } from './routes/accountRoutes.ts';
+import { createAssetRouter } from './routes/assetRoutes.ts';
+import { createLiquidityPoolRouter } from './routes/liquidityPoolRoutes.ts';
+import { createOperationRouter } from './routes/operationRoutes.ts';
+import { createSorobanRouter } from './routes/sorobanRoutes.ts';
+import { createAiRouter } from './routes/aiRoutes.ts';
+import { createDashboardRouter } from './routes/dashboardRoutes.ts';
+import { createReportRouter } from './routes/reportRoutes.ts';
+import { createAlertRouter } from './routes/alertRoutes.ts';
+import { createWorkspaceRouter } from './routes/workspaceRoutes.ts';
+import { createSearchRouter } from './routes/searchRoutes.ts';
+import { createSettingsRouter } from './routes/settingsRoutes.ts';
+
+import { Logger } from './utils/logger.ts';
 
 const logger = new Logger('DataEngine');
 
@@ -79,6 +88,11 @@ export interface DataEngineInstance {
     asset: AssetRepository;
     liquidityPool: LiquidityPoolRepository;
     soroban: SorobanRepository;
+    userDb: UserDbRepository;
+    dashboardDb: DashboardDbRepository;
+    reportDb: ReportDbRepository;
+    alertDb: AlertDbRepository;
+    workspaceDb: WorkspaceDbRepository;
   };
   services: {
     ledger: LedgerService;
@@ -143,7 +157,7 @@ export function initializeDataEngine(
     stellarCache
   );
 
-  // Initialize Classic Repositories
+  // Initialize Classic Blockchain Repositories
   const ledgerRepo = new LedgerRepository(horizonClient, cache);
   const txRepo = new TransactionRepository(horizonClient, cache);
   const opRepo = new OperationRepository(horizonClient, cache);
@@ -151,6 +165,13 @@ export function initializeDataEngine(
   const assetRepo = new AssetRepository(horizonClient, cache);
   const poolRepo = new LiquidityPoolRepository(horizonClient, cache);
   const sorobanRepo = new SorobanRepository(sorobanClient, cache);
+
+  // Initialize Cloud SQL PostgreSQL Repositories
+  const userDbRepo = new UserDbRepository();
+  const dashboardDbRepo = new DashboardDbRepository();
+  const reportDbRepo = new ReportDbRepository();
+  const alertDbRepo = new AlertDbRepository();
+  const workspaceDbRepo = new WorkspaceDbRepository();
 
   // Initialize Domain Services
   const ledgerService = new LedgerService(ledgerRepo);
@@ -172,10 +193,10 @@ export function initializeDataEngine(
     opService
   );
 
-  const dashboardService = new DashboardService();
-  const reportService = new ReportService(networkService, assetService, poolService, sorobanService);
-  const alertService = new AlertService();
-  const workspaceService = new WorkspaceService();
+  const dashboardService = new DashboardService(dashboardDbRepo, userDbRepo);
+  const reportService = new ReportService(networkService, assetService, poolService, sorobanService, reportDbRepo, userDbRepo);
+  const alertService = new AlertService(alertDbRepo, userDbRepo);
+  const workspaceService = new WorkspaceService(workspaceDbRepo, userDbRepo);
   const searchService = new SearchService(assetService, poolService, sorobanService, dashboardService, reportService);
   const settingsService = new SettingsService();
 
@@ -205,7 +226,7 @@ export function initializeDataEngine(
   apiRouter.use('/search', createSearchRouter(searchService));
   apiRouter.use('/settings', createSettingsRouter(settingsService));
 
-  logger.info('Stellar Production Data Engine successfully initialized with Event Bus, SSE, and all routes.');
+  logger.info('Stellar Production Data Engine successfully initialized with Cloud SQL Repositories, Event Bus, SSE, and all routes.');
 
   return {
     horizonClient,
@@ -221,6 +242,11 @@ export function initializeDataEngine(
       asset: assetRepo,
       liquidityPool: poolRepo,
       soroban: sorobanRepo,
+      userDb: userDbRepo,
+      dashboardDb: dashboardDbRepo,
+      reportDb: reportDbRepo,
+      alertDb: alertDbRepo,
+      workspaceDb: workspaceDbRepo,
     },
     services: {
       ledger: ledgerService,

@@ -1,17 +1,23 @@
 /**
  * Nolyvatix Data Engine - Alert & Notification Center Service
  * Custom triggers, multi-channel dispatch (Browser, Email, Webhooks, Slack, Discord)
+ * Backed by Cloud SQL PostgreSQL with seamless in-memory fallback
  */
 
-import { AlertRule, AlertTarget, AlertChannel } from '../../types/index.js';
-import { Logger } from '../utils/logger.js';
+import { AlertRule, AlertChannel } from '../../types/index.ts';
+import { Logger } from '../utils/logger.ts';
+import { AlertDbRepository } from '../repositories/db/alertDbRepository.ts';
+import { UserDbRepository } from '../repositories/db/userDbRepository.ts';
 
 const logger = new Logger('AlertService');
 
 export class AlertService {
-  private alerts: Map<string, AlertRule> = new Map();
+  private inMemoryAlerts: Map<string, AlertRule> = new Map();
 
-  constructor() {
+  constructor(
+    private alertRepo: AlertDbRepository = new AlertDbRepository(),
+    private userRepo: UserDbRepository = new UserDbRepository()
+  ) {
     this.seedDefaultAlerts();
   }
 
@@ -59,18 +65,44 @@ export class AlertService {
       },
     ];
 
-    defaults.forEach((a) => this.alerts.set(a.id, a));
+    defaults.forEach((a) => this.inMemoryAlerts.set(a.id, a));
   }
 
   async getAllAlerts(): Promise<AlertRule[]> {
-    return Array.from(this.alerts.values());
+    try {
+      const user = await this.userRepo.getOrCreateDefaultUser();
+      const dbAlerts = await this.alertRepo.getAllAlerts(user.id);
+      if (dbAlerts && dbAlerts.length > 0) {
+        return dbAlerts;
+      }
+    } catch (e) {
+      logger.error('Error querying alerts from DB, checking memory', e);
+    }
+    return Array.from(this.inMemoryAlerts.values());
   }
 
   async getAlertById(id: string): Promise<AlertRule | null> {
-    return this.alerts.get(id) || null;
+    try {
+      const fromDb = await this.alertRepo.getAlertById(id);
+      if (fromDb) return fromDb;
+    } catch (e) {
+      logger.error(`Error querying alert ${id} from DB, checking memory`, e);
+    }
+    return this.inMemoryAlerts.get(id) || null;
   }
 
   async createAlert(data: Partial<AlertRule>): Promise<AlertRule> {
+    try {
+      const user = await this.userRepo.getOrCreateDefaultUser();
+      const created = await this.alertRepo.createAlert(user.id, data);
+      if (created) {
+        this.inMemoryAlerts.set(created.id, created);
+        return created;
+      }
+    } catch (e) {
+      logger.error('Failed to create alert in DB, using memory', e);
+    }
+
     const id = `alt-${Date.now()}`;
     const newAlert: AlertRule = {
       id,
@@ -83,61 +115,75 @@ export class AlertService {
       enabled: data.enabled ?? true,
     };
 
-    this.alerts.set(id, newAlert);
+    this.inMemoryAlerts.set(id, newAlert);
     logger.info(`Created alert rule ${id}: ${newAlert.name}`);
     return newAlert;
   }
 
   async updateAlert(id: string, updates: Partial<AlertRule>): Promise<AlertRule> {
-    const existing = this.alerts.get(id);
+    try {
+      const updatedInDb = await this.alertRepo.updateAlert(id, updates);
+      if (updatedInDb) {
+        this.inMemoryAlerts.set(id, updatedInDb);
+        return updatedInDb;
+      }
+    } catch (e) {
+      logger.error(`Failed to update alert ${id} in DB`, e);
+    }
+
+    const existing = this.inMemoryAlerts.get(id);
     if (!existing) {
       throw new Error(`Alert rule ${id} not found`);
     }
 
     const updated = { ...existing, ...updates };
-    this.alerts.set(id, updated);
-    logger.info(`Updated alert rule ${id}`);
+    this.inMemoryAlerts.set(id, updated);
+    logger.info(`Updated alert rule in memory ${id}`);
     return updated;
   }
 
   async deleteAlert(id: string): Promise<boolean> {
-    const deleted = this.alerts.delete(id);
+    try {
+      await this.alertRepo.deleteAlert(id);
+    } catch (e) {
+      logger.error(`Failed to delete alert ${id} from DB`, e);
+    }
+    const deleted = this.inMemoryAlerts.delete(id);
     if (deleted) {
-      logger.info(`Deleted alert rule ${id}`);
+      logger.info(`Deleted alert rule: ${id}`);
     }
     return deleted;
   }
 
   async testTriggerAlert(id: string): Promise<{ success: boolean; channel: AlertChannel; payload: any }> {
-    const alert = this.alerts.get(id);
+    const alert = await this.getAlertById(id);
     if (!alert) {
       throw new Error(`Alert rule ${id} not found`);
     }
 
-    alert.lastTriggered = new Date().toISOString();
-    this.alerts.set(id, alert);
+    const updated = await this.updateAlert(id, { lastTriggered: new Date().toISOString() }).catch(() => alert);
 
     const payload = {
-      alertId: alert.id,
-      alertName: alert.name,
-      target: alert.target,
-      condition: alert.condition,
-      threshold: alert.threshold,
-      timestamp: alert.lastTriggered,
+      alertId: updated.id,
+      alertName: updated.name,
+      target: updated.target,
+      condition: updated.condition,
+      threshold: updated.threshold,
+      timestamp: updated.lastTriggered || new Date().toISOString(),
       network: 'Stellar Mainnet',
       sampleEventData: {
-        currentValue: alert.condition === 'above' ? alert.threshold * 1.25 : alert.threshold * 0.75,
+        currentValue: updated.condition === 'above' ? updated.threshold * 1.25 : updated.threshold * 0.75,
         txHash: 'e7a419f854b7264858d4a942a19cf783e4c6f9e0132b8429ad104975f28c2920',
         ledgerSequence: 52148902,
         sourceAccount: 'GAAZI4TCR3TY5OJHCTJC2A4AFLA23OIB4X3A6NE3AM3A7EUJ5YATAG22',
       },
     };
 
-    logger.info(`Dispatched test payload for alert ${id} to ${alert.channel}`);
+    logger.info(`Dispatched test payload for alert ${id} to ${updated.channel}`);
 
     return {
       success: true,
-      channel: alert.channel,
+      channel: updated.channel as AlertChannel,
       payload,
     };
   }
