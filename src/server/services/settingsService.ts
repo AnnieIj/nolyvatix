@@ -1,15 +1,16 @@
 /**
  * Nolyvatix Data Engine - Platform Settings & Preferences Service
  * Manages user preferences, theme, network settings, AI configuration, export defaults, and keyboard shortcuts
+ * Scoped per authenticated tenant / user
  */
 
-import { PlatformSettings } from '../../types/index.js';
-import { Logger } from '../utils/logger.js';
+import { PlatformSettings } from '../../types/index.ts';
+import { Logger } from '../utils/logger.ts';
 
 const logger = new Logger('SettingsService');
 
 export class SettingsService {
-  private settings: PlatformSettings = {
+  private defaultSettings: PlatformSettings = {
     theme: 'dark',
     refreshIntervalSeconds: 10,
     networkPreference: 'mainnet',
@@ -19,13 +20,20 @@ export class SettingsService {
     keyboardShortcutsEnabled: true,
   };
 
-  async getSettings(): Promise<PlatformSettings> {
-    return this.settings;
+  private settingsByUser: Map<number, PlatformSettings> = new Map();
+
+  async getSettings(userId = 1): Promise<PlatformSettings> {
+    if (!this.settingsByUser.has(userId)) {
+      this.settingsByUser.set(userId, { ...this.defaultSettings });
+    }
+    return this.settingsByUser.get(userId)!;
   }
 
-  async updateSettings(updates: Partial<PlatformSettings>): Promise<PlatformSettings> {
-    this.settings = { ...this.settings, ...updates };
-    logger.info('Updated user platform settings:', updates);
-    return this.settings;
+  async updateSettings(updates: Partial<PlatformSettings>, userId = 1): Promise<PlatformSettings> {
+    const current = await this.getSettings(userId);
+    const updated = { ...current, ...updates };
+    this.settingsByUser.set(userId, updated);
+    logger.info(`Updated user ${userId} platform settings:`, updates);
+    return updated;
   }
 }

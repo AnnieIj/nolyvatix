@@ -68,3 +68,5 @@ export const NotFoundView: React.FC = () => {
     </div>
   );
 };
+
+export default NotFoundView;

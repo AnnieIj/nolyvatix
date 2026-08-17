@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../../../db/index.ts';
 import { alertRules, notificationHistory } from '../../../db/schema.ts';
 import { AlertRule } from '../../../types/index.ts';
@@ -33,14 +33,22 @@ export class AlertDbRepository {
     }
   }
 
-  async getAlertById(id: number | string): Promise<AlertRule | null> {
+  async getAlertById(id: number | string, userId: number): Promise<AlertRule | null> {
     if (!db) return null;
     const numericId = typeof id === 'string' ? parseInt(id.replace(/\D/g, ''), 10) : id;
     if (isNaN(numericId)) return null;
 
     try {
-      const records = await db.select().from(alertRules).where(eq(alertRules.id, numericId)).limit(1);
-      if (!records || records.length === 0) return null;
+      const records = await db
+        .select()
+        .from(alertRules)
+        .where(and(eq(alertRules.id, numericId), eq(alertRules.userId, userId)))
+        .limit(1);
+
+      if (!records || records.length === 0) {
+        logger.warn(`Tenant isolation block or not found: Alert ${numericId} for user ${userId}`);
+        return null;
+      }
 
       const r = records[0];
       return {
@@ -94,7 +102,7 @@ export class AlertDbRepository {
     }
   }
 
-  async updateAlert(id: number | string, updates: Partial<AlertRule>): Promise<AlertRule | null> {
+  async updateAlert(id: number | string, userId: number, updates: Partial<AlertRule>): Promise<AlertRule | null> {
     if (!db) return null;
     const numericId = typeof id === 'string' ? parseInt(id.replace(/\D/g, ''), 10) : id;
     if (isNaN(numericId)) return null;
@@ -113,10 +121,13 @@ export class AlertDbRepository {
       const updated = await db
         .update(alertRules)
         .set(valuesToUpdate)
-        .where(eq(alertRules.id, numericId))
+        .where(and(eq(alertRules.id, numericId), eq(alertRules.userId, userId)))
         .returning();
 
-      if (!updated || updated.length === 0) return null;
+      if (!updated || updated.length === 0) {
+        logger.warn(`Alert update failed: Alert ${numericId} not found or not owned by user ${userId}`);
+        return null;
+      }
       const r = updated[0];
       return {
         id: String(r.id),
@@ -134,14 +145,18 @@ export class AlertDbRepository {
     }
   }
 
-  async deleteAlert(id: number | string): Promise<boolean> {
+  async deleteAlert(id: number | string, userId: number): Promise<boolean> {
     if (!db) return false;
     const numericId = typeof id === 'string' ? parseInt(id.replace(/\D/g, ''), 10) : id;
     if (isNaN(numericId)) return false;
 
     try {
-      await db.delete(alertRules).where(eq(alertRules.id, numericId));
-      return true;
+      const deleted = await db
+        .delete(alertRules)
+        .where(and(eq(alertRules.id, numericId), eq(alertRules.userId, userId)))
+        .returning();
+
+      return deleted && deleted.length > 0;
     } catch (error) {
       logger.error(`Failed to delete alert ${id}`, error);
       return false;

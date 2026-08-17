@@ -4,6 +4,7 @@ import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useAppStore } from '../store/useAppStore';
+import { authFetch } from '../lib/apiClient';
 import {
   Briefcase,
   Grid3X3,
@@ -28,7 +29,7 @@ export const WorkspaceHubView: React.FC = () => {
 
   const fetchWorkspace = async () => {
     try {
-      const res = await fetch('/api/workspaces');
+      const res = await authFetch('/api/workspaces');
       if (res.ok) {
         const json = await res.json();
         setWorkspace(json.data);
@@ -40,7 +41,7 @@ export const WorkspaceHubView: React.FC = () => {
 
   const handleTogglePin = async (category: 'dashboards' | 'assets' | 'wallets' | 'contracts', itemId: string) => {
     try {
-      const res = await fetch('/api/workspaces/pin', {
+      const res = await authFetch('/api/workspaces/pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, itemId }),

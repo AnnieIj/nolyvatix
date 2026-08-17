@@ -1,7 +1,7 @@
 /**
  * Nolyvatix Data Engine - Report Builder Service
  * Generates enterprise analytical reports (Daily, Weekly, Monthly, Custom) with PDF/CSV/JSON/Markdown exports
- * Backed by Cloud SQL PostgreSQL with seamless in-memory fallback
+ * Backed by Cloud SQL PostgreSQL with tenant isolation and owner scoping
  */
 
 import { BIReport } from '../../types/index.ts';
@@ -16,7 +16,7 @@ import { UserDbRepository } from '../repositories/db/userDbRepository.ts';
 const logger = new Logger('ReportService');
 
 export class ReportService {
-  private inMemorySavedReports: Map<string, BIReport> = new Map();
+  private inMemorySavedReports: Map<string, { report: BIReport; userId: number; isDefault?: boolean }> = new Map();
 
   constructor(
     private networkService: NetworkService,
@@ -94,40 +94,58 @@ export class ReportService {
       },
     };
 
-    this.inMemorySavedReports.set(initialReport.id, initialReport);
+    this.inMemorySavedReports.set(initialReport.id, { report: initialReport, userId: 1, isDefault: true });
   }
 
-  async getAllReports(): Promise<BIReport[]> {
+  private async resolveUserId(userId?: number): Promise<number> {
+    if (userId !== undefined && userId > 0) {
+      return userId;
+    }
+    const defaultUser = await this.userRepo.getOrCreateDefaultUser();
+    return defaultUser.id;
+  }
+
+  async getAllReports(userId?: number): Promise<BIReport[]> {
+    const effectiveUserId = await this.resolveUserId(userId);
     try {
-      const user = await this.userRepo.getOrCreateDefaultUser();
-      const dbReports = await this.reportRepo.getAllReports(user.id);
+      const dbReports = await this.reportRepo.getAllReports(effectiveUserId);
       if (dbReports && dbReports.length > 0) {
         return dbReports;
       }
     } catch (e) {
       logger.error('Error querying reports from DB, checking memory', e);
     }
-    return Array.from(this.inMemorySavedReports.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return Array.from(this.inMemorySavedReports.values())
+      .filter((entry) => entry.userId === effectiveUserId || entry.isDefault)
+      .map((entry) => entry.report)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
-  async getReportById(id: string): Promise<BIReport | null> {
+  async getReportById(id: string, userId?: number): Promise<BIReport | null> {
+    const effectiveUserId = await this.resolveUserId(userId);
     try {
-      const fromDb = await this.reportRepo.getReportById(id);
+      const fromDb = await this.reportRepo.getReportById(id, effectiveUserId);
       if (fromDb) return fromDb;
     } catch (e) {
       logger.error(`Error querying report ${id} from DB, checking memory`, e);
     }
-    return this.inMemorySavedReports.get(id) || null;
+    const entry = this.inMemorySavedReports.get(id);
+    if (!entry) return null;
+    if (entry.userId === effectiveUserId || entry.isDefault) {
+      return entry.report;
+    }
+    return null;
   }
 
-  async generateReport(params: {
-    period: 'daily' | 'weekly' | 'monthly' | 'custom';
-    startDate?: string;
-    endDate?: string;
-    sections?: string[];
-  }): Promise<BIReport> {
+  async generateReport(
+    params: {
+      period: 'daily' | 'weekly' | 'monthly' | 'custom';
+      startDate?: string;
+      endDate?: string;
+      sections?: string[];
+    },
+    userId?: number
+  ): Promise<BIReport> {
     const health = await this.networkService.getNetworkHealth().catch(() => null);
     const assets = await this.assetService.getAssets(undefined, undefined, { limit: 5 }).catch(() => []);
     const pools = await this.poolService.getLiquidityPools({ limit: 5 }).catch(() => []);
@@ -206,26 +224,53 @@ export class ReportService {
       },
     };
 
+    const effectiveUserId = await this.resolveUserId(userId);
     try {
-      const user = await this.userRepo.getOrCreateDefaultUser();
-      const savedInDb = await this.reportRepo.createReport(user.id, newReport);
+      const savedInDb = await this.reportRepo.createReport(effectiveUserId, newReport);
       if (savedInDb) {
-        this.inMemorySavedReports.set(savedInDb.id, savedInDb);
+        this.inMemorySavedReports.set(savedInDb.id, { report: savedInDb, userId: effectiveUserId });
         return savedInDb;
       }
     } catch (e) {
       logger.error('Failed to save report to DB, using in-memory', e);
     }
 
-    this.inMemorySavedReports.set(newReport.id, newReport);
+    this.inMemorySavedReports.set(newReport.id, { report: newReport, userId: effectiveUserId });
     logger.info(`Generated new BI report: ${newReport.id} (${newReport.title})`);
     return newReport;
   }
 
-  async exportReport(id: string, format: 'pdf' | 'csv' | 'json' | 'markdown'): Promise<{ filename: string; contentType: string; data: string }> {
-    const report = await this.getReportById(id);
+  async deleteReport(id: string, userId?: number): Promise<boolean> {
+    const effectiveUserId = await this.resolveUserId(userId);
+    try {
+      const deletedFromDb = await this.reportRepo.deleteReport(id, effectiveUserId);
+      if (deletedFromDb) {
+        this.inMemorySavedReports.delete(id);
+        return true;
+      }
+    } catch (e) {
+      logger.error(`Failed to delete report ${id} from DB`, e);
+    }
+    const entry = this.inMemorySavedReports.get(id);
+    if (!entry || entry.userId !== effectiveUserId) {
+      return false;
+    }
+    const deleted = this.inMemorySavedReports.delete(id);
+    if (deleted) {
+      logger.info(`Deleted report from memory: ${id}`);
+    }
+    return deleted;
+  }
+
+  async exportReport(
+    id: string,
+    format: 'pdf' | 'csv' | 'json' | 'markdown',
+    userId?: number
+  ): Promise<{ filename: string; contentType: string; data: string }> {
+    const effectiveUserId = await this.resolveUserId(userId);
+    const report = await this.getReportById(id, effectiveUserId);
     if (!report) {
-      throw new Error(`Report ${id} not found`);
+      throw new Error(`Report ${id} not found or unauthorized`);
     }
 
     const filename = `stellar-bi-report-${report.period}-${id}.${format === 'markdown' ? 'md' : format}`;

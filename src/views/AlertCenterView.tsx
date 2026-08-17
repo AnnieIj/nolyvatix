@@ -4,6 +4,7 @@ import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
+import { authFetch } from '../lib/apiClient';
 import {
   Bell,
   Plus,
@@ -41,7 +42,7 @@ export const AlertCenterView: React.FC = () => {
   const fetchAlerts = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/alerts');
+      const res = await authFetch('/api/alerts');
       if (res.ok) {
         const json = await res.json();
         setAlerts(json.data || []);
@@ -56,7 +57,7 @@ export const AlertCenterView: React.FC = () => {
   const handleCreateAlert = async () => {
     if (!name.trim()) return;
     try {
-      const res = await fetch('/api/alerts', {
+      const res = await authFetch('/api/alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -83,7 +84,7 @@ export const AlertCenterView: React.FC = () => {
 
   const handleToggleEnabled = async (alert: AlertRule) => {
     try {
-      const res = await fetch(`/api/alerts/${alert.id}`, {
+      const res = await authFetch(`/api/alerts/${alert.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !alert.enabled }),
@@ -99,7 +100,7 @@ export const AlertCenterView: React.FC = () => {
   const handleDeleteAlert = async (id: string) => {
     if (!window.confirm('Delete this alert rule?')) return;
     try {
-      const res = await fetch(`/api/alerts/${id}`, { method: 'DELETE' });
+      const res = await authFetch(`/api/alerts/${id}`, { method: 'DELETE' });
       if (res.ok) {
         fetchAlerts();
       }
@@ -110,7 +111,7 @@ export const AlertCenterView: React.FC = () => {
 
   const handleTestTrigger = async (id: string) => {
     try {
-      const res = await fetch(`/api/alerts/${id}/test-trigger`, { method: 'POST' });
+      const res = await authFetch(`/api/alerts/${id}/test-trigger`, { method: 'POST' });
       if (res.ok) {
         const json = await res.json();
         setTestResult(json.data);

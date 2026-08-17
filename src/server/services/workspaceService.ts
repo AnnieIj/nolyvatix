@@ -1,7 +1,7 @@
 /**
  * Nolyvatix Data Engine - Workspace Management Service
  * Tracks user favorites, pinned entities, recent searches, and saved AI conversations
- * Backed by Cloud SQL PostgreSQL with seamless in-memory fallback
+ * Backed by Cloud SQL PostgreSQL with tenant isolation and owner scoping
  */
 
 import { UserWorkspace } from '../../types/index.ts';
@@ -12,89 +12,112 @@ import { UserDbRepository } from '../repositories/db/userDbRepository.ts';
 const logger = new Logger('WorkspaceService');
 
 export class WorkspaceService {
-  private inMemoryWorkspace: UserWorkspace = {
-    favoriteDashboards: ['dash-mainnet-overview', 'dash-soroban-apm'],
-    recentReports: ['rep-default-24h'],
-    savedAIConversations: [
-      { id: 'chat-1', title: 'Soroban WASM CPU Gas Optimization Analysis', timestamp: new Date().toISOString() },
-      { id: 'chat-2', title: 'Circle USDC Corridor Liquidity Audit', timestamp: new Date(Date.now() - 86400000).toISOString() },
-    ],
-    pinnedAssets: ['USDC:GA5ZSEJYB37JRC5AVCI5M4GE323XNNOACS4M4S3Y3XAC', 'XLM:NATIVE'],
-    pinnedWallets: ['GAAZI4TCR3TY5OJHCTJC2A4AFLA23OIB4X3A6NE3AM3A7EUJ5YATAG22'],
-    pinnedContracts: ['CCW67TSB3SSS3PPHR3T5W34ACRAG2DMW22L36TH6E56S5W6F45X3ABX5'],
-    recentSearches: ['USDC liquidity', 'Soroban WASM gas', 'GAAZI4TCR3TY5OJHCTJC', 'Ledger #52148900'],
-  };
+  private inMemoryWorkspacesByUser: Map<number, UserWorkspace> = new Map();
 
   constructor(
     private workspaceRepo: WorkspaceDbRepository = new WorkspaceDbRepository(),
     private userRepo: UserDbRepository = new UserDbRepository()
   ) {}
 
-  async getWorkspace(): Promise<UserWorkspace> {
+  private getDefaultUserWorkspace(): UserWorkspace {
+    return {
+      favoriteDashboards: ['dash-mainnet-overview', 'dash-soroban-apm'],
+      recentReports: ['rep-default-24h'],
+      savedAIConversations: [
+        { id: 'chat-1', title: 'Soroban WASM CPU Gas Optimization Analysis', timestamp: new Date().toISOString() },
+        { id: 'chat-2', title: 'Circle USDC Corridor Liquidity Audit', timestamp: new Date(Date.now() - 86400000).toISOString() },
+      ],
+      pinnedAssets: ['USDC:GA5ZSEJYB37JRC5AVCI5M4GE323XNNOACS4M4S3Y3XAC', 'XLM:NATIVE'],
+      pinnedWallets: ['GAAZI4TCR3TY5OJHCTJC2A4AFLA23OIB4X3A6NE3AM3A7EUJ5YATAG22'],
+      pinnedContracts: ['CCW67TSB3SSS3PPHR3T5W34ACRAG2DMW22L36TH6E56S5W6F45X3ABX5'],
+      recentSearches: ['USDC liquidity', 'Soroban WASM gas', 'GAAZI4TCR3TY5OJHCTJC', 'Ledger #52148900'],
+    };
+  }
+
+  private async resolveUserId(userId?: number): Promise<number> {
+    if (userId !== undefined && userId > 0) {
+      return userId;
+    }
+    const defaultUser = await this.userRepo.getOrCreateDefaultUser();
+    return defaultUser.id;
+  }
+
+  private getOrCreateInMemoryWorkspace(userId: number): UserWorkspace {
+    if (!this.inMemoryWorkspacesByUser.has(userId)) {
+      this.inMemoryWorkspacesByUser.set(userId, this.getDefaultUserWorkspace());
+    }
+    return this.inMemoryWorkspacesByUser.get(userId)!;
+  }
+
+  async getWorkspace(userId?: number): Promise<UserWorkspace> {
+    const effectiveUserId = await this.resolveUserId(userId);
+    const inMemWs = this.getOrCreateInMemoryWorkspace(effectiveUserId);
+
     try {
-      const user = await this.userRepo.getOrCreateDefaultUser();
-      const dbWs = await this.workspaceRepo.getWorkspace(user.id);
+      const dbWs = await this.workspaceRepo.getWorkspace(effectiveUserId);
       if (dbWs) {
-        // Merge with memory defaults if empty
         return {
-          favoriteDashboards: dbWs.favoriteDashboards.length > 0 ? dbWs.favoriteDashboards : this.inMemoryWorkspace.favoriteDashboards,
-          recentReports: dbWs.recentReports.length > 0 ? dbWs.recentReports : this.inMemoryWorkspace.recentReports,
-          savedAIConversations: this.inMemoryWorkspace.savedAIConversations,
-          pinnedAssets: dbWs.pinnedAssets.length > 0 ? dbWs.pinnedAssets : this.inMemoryWorkspace.pinnedAssets,
-          pinnedWallets: dbWs.pinnedWallets.length > 0 ? dbWs.pinnedWallets : this.inMemoryWorkspace.pinnedWallets,
-          pinnedContracts: dbWs.pinnedContracts.length > 0 ? dbWs.pinnedContracts : this.inMemoryWorkspace.pinnedContracts,
-          recentSearches: dbWs.recentSearches.length > 0 ? dbWs.recentSearches : this.inMemoryWorkspace.recentSearches,
+          favoriteDashboards: dbWs.favoriteDashboards.length > 0 ? dbWs.favoriteDashboards : inMemWs.favoriteDashboards,
+          recentReports: dbWs.recentReports.length > 0 ? dbWs.recentReports : inMemWs.recentReports,
+          savedAIConversations: inMemWs.savedAIConversations,
+          pinnedAssets: dbWs.pinnedAssets.length > 0 ? dbWs.pinnedAssets : inMemWs.pinnedAssets,
+          pinnedWallets: dbWs.pinnedWallets.length > 0 ? dbWs.pinnedWallets : inMemWs.pinnedWallets,
+          pinnedContracts: dbWs.pinnedContracts.length > 0 ? dbWs.pinnedContracts : inMemWs.pinnedContracts,
+          recentSearches: dbWs.recentSearches.length > 0 ? dbWs.recentSearches : inMemWs.recentSearches,
         };
       }
     } catch (e) {
-      logger.error('Error fetching workspace from DB, checking in-memory', e);
+      logger.error(`Error fetching workspace from DB for user ${effectiveUserId}, checking in-memory`, e);
     }
-    return this.inMemoryWorkspace;
+    return inMemWs;
   }
 
-  async togglePin(category: 'dashboards' | 'assets' | 'wallets' | 'contracts', itemId: string): Promise<UserWorkspace> {
+  async togglePin(category: 'dashboards' | 'assets' | 'wallets' | 'contracts', itemId: string, userId?: number): Promise<UserWorkspace> {
+    const effectiveUserId = await this.resolveUserId(userId);
+
     try {
-      const user = await this.userRepo.getOrCreateDefaultUser();
-      await this.workspaceRepo.togglePin(user.id, category, itemId);
+      await this.workspaceRepo.togglePin(effectiveUserId, category, itemId);
     } catch (e) {
-      logger.error(`Error toggling pin in DB for ${category}:${itemId}`, e);
+      logger.error(`Error toggling pin in DB for user ${effectiveUserId}, ${category}:${itemId}`, e);
     }
 
+    const inMemWs = this.getOrCreateInMemoryWorkspace(effectiveUserId);
     const listMap = {
-      dashboards: this.inMemoryWorkspace.favoriteDashboards,
-      assets: this.inMemoryWorkspace.pinnedAssets,
-      wallets: this.inMemoryWorkspace.pinnedWallets,
-      contracts: this.inMemoryWorkspace.pinnedContracts,
+      dashboards: inMemWs.favoriteDashboards,
+      assets: inMemWs.pinnedAssets,
+      wallets: inMemWs.pinnedWallets,
+      contracts: inMemWs.pinnedContracts,
     };
 
     const targetList = listMap[category];
     const index = targetList.indexOf(itemId);
     if (index >= 0) {
       targetList.splice(index, 1);
-      logger.info(`Unpinned ${category} item: ${itemId}`);
+      logger.info(`User ${effectiveUserId}: Unpinned ${category} item: ${itemId}`);
     } else {
       targetList.push(itemId);
-      logger.info(`Pinned ${category} item: ${itemId}`);
+      logger.info(`User ${effectiveUserId}: Pinned ${category} item: ${itemId}`);
     }
 
-    return this.getWorkspace();
+    return this.getWorkspace(effectiveUserId);
   }
 
-  async addRecentSearch(query: string): Promise<UserWorkspace> {
-    if (!query.trim()) return this.getWorkspace();
+  async addRecentSearch(query: string, userId?: number): Promise<UserWorkspace> {
+    const effectiveUserId = await this.resolveUserId(userId);
+    if (!query.trim()) return this.getWorkspace(effectiveUserId);
 
     try {
-      const user = await this.userRepo.getOrCreateDefaultUser();
-      await this.workspaceRepo.addRecentSearch(user.id, query);
+      await this.workspaceRepo.addRecentSearch(effectiveUserId, query);
     } catch (e) {
-      logger.error(`Error adding recent search in DB: ${query}`, e);
+      logger.error(`Error adding recent search in DB for user ${effectiveUserId}: ${query}`, e);
     }
 
-    this.inMemoryWorkspace.recentSearches = [
+    const inMemWs = this.getOrCreateInMemoryWorkspace(effectiveUserId);
+    inMemWs.recentSearches = [
       query.trim(),
-      ...this.inMemoryWorkspace.recentSearches.filter((s) => s.toLowerCase() !== query.toLowerCase()),
+      ...inMemWs.recentSearches.filter((s) => s.toLowerCase() !== query.toLowerCase()),
     ].slice(0, 10);
 
-    return this.getWorkspace();
+    return this.getWorkspace(effectiveUserId);
   }
 }

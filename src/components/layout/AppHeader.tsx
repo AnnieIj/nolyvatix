@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
+import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { StatusChip } from '../ui/StatusChip';
@@ -18,6 +19,8 @@ import {
   CheckCircle2,
   LogOut,
   Command,
+  ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
 
 export const AppHeader: React.FC = () => {
@@ -34,6 +37,8 @@ export const AppHeader: React.FC = () => {
     aiCopilotOpen,
     setActiveRoute,
   } = useAppStore();
+
+  const { user: authUser, loading: authLoading } = useAuth();
 
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [networkDropdownOpen, setNetworkDropdownOpen] = useState(false);
@@ -132,6 +137,14 @@ export const AppHeader: React.FC = () => {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Tenant Auth Status */}
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded-md text-[11px] font-mono text-zinc-400">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-zinc-300 font-medium">
+              {authUser ? (authUser.isAnonymous ? `Anon:${authUser.uid.slice(0, 5)}` : authUser.email || authUser.uid.slice(0, 6)) : 'Auth: Active'}
+            </span>
           </div>
 
           {/* AI Co-Pilot Trigger Button */}

@@ -47,19 +47,11 @@ const SettingsCenterView = lazy(() =>
   import('../views/SettingsCenterView').then((m) => ({ default: m.SettingsCenterView }))
 );
 
-// Error and Fallback Views
-const NotFoundView = lazy(() =>
-  import('../views/errors/NotFoundView').then((m) => ({ default: m.NotFoundView }))
-);
-const AccessDeniedView = lazy(() =>
-  import('../views/errors/AccessDeniedView').then((m) => ({ default: m.AccessDeniedView }))
-);
-const ServerErrorView = lazy(() =>
-  import('../views/errors/ServerErrorView').then((m) => ({ default: m.ServerErrorView }))
-);
-const OfflineView = lazy(() =>
-  import('../views/errors/OfflineView').then((m) => ({ default: m.OfflineView }))
-);
+// Statically imported error and fallback views to ensure offline and error recovery is always available in memory
+import { NotFoundView } from '../views/errors/NotFoundView';
+import { AccessDeniedView } from '../views/errors/AccessDeniedView';
+import { ServerErrorView } from '../views/errors/ServerErrorView';
+import { OfflineView } from '../views/errors/OfflineView';
 
 export const AppRouter: React.FC = () => {
   const activeRoute = useAppStore((state) => state.activeRoute);
@@ -118,11 +110,7 @@ export const AppRouter: React.FC = () => {
   }, [activeRoute]);
 
   if (!isOnline && activeRoute !== 'offline') {
-    return (
-      <Suspense fallback={<RouteLoadingSkeleton />}>
-        <OfflineView />
-      </Suspense>
-    );
+    return <OfflineView />;
   }
 
   const renderActiveView = () => {

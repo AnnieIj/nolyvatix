@@ -1,7 +1,8 @@
 /**
  * Nolyvatix Production Data Engine & Dependency Injection Root
  * Integrates Horizon, Soroban, High-Performance Multi-Layer Caching,
- * Pub/Sub Event Bus for Real-Time SSE Streams, Cloud SQL PostgreSQL Repositories, and Business Analytics Services.
+ * Pub/Sub Event Bus for Real-Time SSE Streams, Cloud SQL PostgreSQL Repositories,
+ * Firebase Authentication with Tenant Isolation, and Business Analytics Services.
  */
 
 import { Router } from 'express';
@@ -69,6 +70,9 @@ import { createAlertRouter } from './routes/alertRoutes.ts';
 import { createWorkspaceRouter } from './routes/workspaceRoutes.ts';
 import { createSearchRouter } from './routes/searchRoutes.ts';
 import { createSettingsRouter } from './routes/settingsRoutes.ts';
+
+// Auth Middleware
+import { authenticateUser } from './middleware/authMiddleware.ts';
 
 import { Logger } from './utils/logger.ts';
 
@@ -203,13 +207,13 @@ export function initializeDataEngine(
   // Initialize Main API Router
   const apiRouter = Router();
 
-  // System Health & Diagnostics
+  // Public System Health & Diagnostics
   apiRouter.use('/health', createHealthRouter(stellarHorizonClient, stellarSorobanClient, stellarCache, eventBus));
 
   // Real-Time Server-Sent Events (SSE)
   apiRouter.use('/stream', createStreamRouter(eventBus));
 
-  // Domain Routes
+  // Public Blockchain Data Routes
   apiRouter.use('/network', createNetworkRouter(networkService));
   apiRouter.use('/ledgers', createLedgerRouter(ledgerService, txService, opService));
   apiRouter.use('/transactions', createTransactionRouter(txService, opService));
@@ -219,14 +223,16 @@ export function initializeDataEngine(
   apiRouter.use('/operations', createOperationRouter(opService));
   apiRouter.use('/soroban', createSorobanRouter(sorobanService));
   apiRouter.use('/ai', createAiRouter(aiService));
-  apiRouter.use('/dashboards', createDashboardRouter(dashboardService));
-  apiRouter.use('/reports', createReportRouter(reportService));
-  apiRouter.use('/alerts', createAlertRouter(alertService));
-  apiRouter.use('/workspaces', createWorkspaceRouter(workspaceService));
   apiRouter.use('/search', createSearchRouter(searchService));
-  apiRouter.use('/settings', createSettingsRouter(settingsService));
 
-  logger.info('Stellar Production Data Engine successfully initialized with Cloud SQL Repositories, Event Bus, SSE, and all routes.');
+  // Protected User & Tenant-Scoped Domain Routes
+  apiRouter.use('/dashboards', authenticateUser, createDashboardRouter(dashboardService));
+  apiRouter.use('/reports', authenticateUser, createReportRouter(reportService));
+  apiRouter.use('/alerts', authenticateUser, createAlertRouter(alertService));
+  apiRouter.use('/workspaces', authenticateUser, createWorkspaceRouter(workspaceService));
+  apiRouter.use('/settings', authenticateUser, createSettingsRouter(settingsService));
+
+  logger.info('Stellar Production Data Engine successfully initialized with Firebase Auth, Cloud SQL Repositories, Event Bus, SSE, and all routes.');
 
   return {
     horizonClient,

@@ -3,6 +3,7 @@ import { BIReport } from '../types';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { authFetch } from '../lib/apiClient';
 import {
   FileText,
   Download,
@@ -46,7 +47,7 @@ export const ReportBuilderView: React.FC = () => {
 
   const fetchReports = async () => {
     try {
-      const res = await fetch('/api/reports');
+      const res = await authFetch('/api/reports');
       if (res.ok) {
         const json = await res.json();
         setReports(json.data || []);
@@ -70,7 +71,7 @@ export const ReportBuilderView: React.FC = () => {
   const handleGenerateReport = async () => {
     try {
       setGenerating(true);
-      const res = await fetch('/api/reports/generate', {
+      const res = await authFetch('/api/reports/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -95,8 +96,22 @@ export const ReportBuilderView: React.FC = () => {
     }
   };
 
-  const handleExport = (reportId: string, format: 'pdf' | 'csv' | 'json' | 'markdown') => {
-    window.open(`/api/reports/${reportId}/export?format=${format}`, '_blank');
+  const handleExport = async (reportId: string, format: 'pdf' | 'csv' | 'json' | 'markdown') => {
+    try {
+      const res = await authFetch(`/api/reports/${reportId}/export?format=${format}`);
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stellar-bi-report-${reportId}.${format === 'markdown' ? 'md' : format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export report:', err);
+    }
   };
 
   return (

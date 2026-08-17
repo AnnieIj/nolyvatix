@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../../components/ui/Button';
 import { GlassCard } from '../../components/ui/GlassCard';
-import { AlertOctagon, RefreshCw, Activity } from 'lucide-react';
+import { AlertOctagon, RefreshCw, Home } from 'lucide-react';
 
 interface ServerErrorViewProps {
   error?: Error | null;
@@ -36,8 +36,19 @@ export const ServerErrorView: React.FC<ServerErrorViewProps> = ({ error, onRetry
           >
             Retry Telemetry Sync
           </Button>
+          <Button
+            variant="secondary"
+            leftIcon={<Home className="w-4 h-4" />}
+            onClick={() => {
+              window.location.hash = '#/command-center';
+            }}
+          >
+            Command Center
+          </Button>
         </div>
       </GlassCard>
     </div>
   );
 };
+
+export default ServerErrorView;

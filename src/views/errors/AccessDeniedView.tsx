@@ -46,3 +46,5 @@ export const AccessDeniedView: React.FC = () => {
     </div>
   );
 };
+
+export default AccessDeniedView;

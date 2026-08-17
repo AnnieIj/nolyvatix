@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../../../db/index.ts';
 import { reports } from '../../../db/schema.ts';
 import { BIReport } from '../../../types/index.ts';
@@ -34,14 +34,22 @@ export class ReportDbRepository {
     }
   }
 
-  async getReportById(id: number | string): Promise<BIReport | null> {
+  async getReportById(id: number | string, userId: number): Promise<BIReport | null> {
     if (!db) return null;
     const numericId = typeof id === 'string' ? parseInt(id.replace(/\D/g, ''), 10) : id;
     if (isNaN(numericId)) return null;
 
     try {
-      const records = await db.select().from(reports).where(eq(reports.id, numericId)).limit(1);
-      if (!records || records.length === 0) return null;
+      const records = await db
+        .select()
+        .from(reports)
+        .where(and(eq(reports.id, numericId), eq(reports.userId, userId)))
+        .limit(1);
+
+      if (!records || records.length === 0) {
+        logger.warn(`Tenant isolation block or not found: Report ${numericId} for user ${userId}`);
+        return null;
+      }
 
       const r = records[0];
       const config = (r.config as any) || {};
@@ -94,14 +102,18 @@ export class ReportDbRepository {
     }
   }
 
-  async deleteReport(id: number | string): Promise<boolean> {
+  async deleteReport(id: number | string, userId: number): Promise<boolean> {
     if (!db) return false;
     const numericId = typeof id === 'string' ? parseInt(id.replace(/\D/g, ''), 10) : id;
     if (isNaN(numericId)) return false;
 
     try {
-      await db.delete(reports).where(eq(reports.id, numericId));
-      return true;
+      const deleted = await db
+        .delete(reports)
+        .where(and(eq(reports.id, numericId), eq(reports.userId, userId)))
+        .returning();
+
+      return deleted && deleted.length > 0;
     } catch (error) {
       logger.error(`Failed to delete report ${id}`, error);
       return false;

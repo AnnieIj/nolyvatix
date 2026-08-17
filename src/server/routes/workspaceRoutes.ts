@@ -1,18 +1,19 @@
 /**
  * Nolyvatix Express API Routes - Workspace Management API
+ * Enforces tenant-isolated ownership and operation validation
  */
 
 import { Router } from 'express';
-import { WorkspaceService } from '../services/workspaceService.js';
-import { sendSuccess } from '../middleware/responseWrapper.js';
+import { WorkspaceService } from '../services/workspaceService.ts';
+import { sendSuccess } from '../middleware/responseWrapper.ts';
 
 export function createWorkspaceRouter(workspaceService: WorkspaceService): Router {
   const router = Router();
 
   // GET /api/workspaces
-  router.get('/', async (_req, res, next) => {
+  router.get('/', async (req, res, next) => {
     try {
-      const workspace = await workspaceService.getWorkspace();
+      const workspace = await workspaceService.getWorkspace(req.user?.id);
       sendSuccess(res, workspace);
     } catch (err) {
       next(err);
@@ -23,7 +24,7 @@ export function createWorkspaceRouter(workspaceService: WorkspaceService): Route
   router.post('/pin', async (req, res, next) => {
     try {
       const { category, itemId } = req.body;
-      const workspace = await workspaceService.togglePin(category, itemId);
+      const workspace = await workspaceService.togglePin(category, itemId, req.user?.id);
       sendSuccess(res, workspace);
     } catch (err) {
       next(err);
@@ -34,7 +35,7 @@ export function createWorkspaceRouter(workspaceService: WorkspaceService): Route
   router.post('/recent-search', async (req, res, next) => {
     try {
       const { query } = req.body;
-      const workspace = await workspaceService.addRecentSearch(query);
+      const workspace = await workspaceService.addRecentSearch(query, req.user?.id);
       sendSuccess(res, workspace);
     } catch (err) {
       next(err);

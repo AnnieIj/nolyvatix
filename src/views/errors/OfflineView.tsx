@@ -36,3 +36,5 @@ export const OfflineView: React.FC = () => {
     </div>
   );
 };
+
+export default OfflineView;

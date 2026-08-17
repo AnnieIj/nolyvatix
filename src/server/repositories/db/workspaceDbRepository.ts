@@ -1,6 +1,6 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../../../db/index.ts';
-import { bookmarks, savedSearches, workspacePreferences } from '../../../db/schema.ts';
+import { bookmarks, savedSearches } from '../../../db/schema.ts';
 import { UserWorkspace } from '../../../types/index.ts';
 import { Logger } from '../../utils/logger.ts';
 
@@ -11,9 +11,9 @@ export class WorkspaceDbRepository {
     if (!db) return null;
 
     try {
-      // 1. Fetch bookmarks
+      // 1. Fetch user bookmarks
       const bookmarkRecords = await db.select().from(bookmarks).where(eq(bookmarks.userId, userId));
-      // 2. Fetch searches
+      // 2. Fetch user searches
       const searchRecords = await db
         .select()
         .from(savedSearches)
@@ -46,7 +46,7 @@ export class WorkspaceDbRepository {
         recentSearches: searchRecords.map((s) => s.query),
       };
     } catch (error) {
-      logger.error('Failed to fetch workspace from database', error);
+      logger.error(`Failed to fetch workspace for user ${userId} from database`, error);
       return null;
     }
   }
@@ -75,7 +75,7 @@ export class WorkspaceDbRepository {
 
       const match = existing.find((b) => b.itemType === itemType && b.itemId === itemId);
       if (match) {
-        await db.delete(bookmarks).where(eq(bookmarks.id, match.id));
+        await db.delete(bookmarks).where(and(eq(bookmarks.id, match.id), eq(bookmarks.userId, userId)));
         return false; // unpinned
       } else {
         await db.insert(bookmarks).values({
@@ -87,7 +87,7 @@ export class WorkspaceDbRepository {
         return true; // pinned
       }
     } catch (error) {
-      logger.error(`Failed to toggle pin in database for ${category}:${itemId}`, error);
+      logger.error(`Failed to toggle pin in database for user ${userId}, ${category}:${itemId}`, error);
       return false;
     }
   }
@@ -102,7 +102,7 @@ export class WorkspaceDbRepository {
         filterCategory: 'ALL',
       });
     } catch (error) {
-      logger.error(`Failed to record search query: ${query}`, error);
+      logger.error(`Failed to record search query for user ${userId}: ${query}`, error);
     }
   }
 }

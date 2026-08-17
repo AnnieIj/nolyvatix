@@ -5,6 +5,7 @@ import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { WorkspaceHeader } from '../components/layout/WorkspaceHeader';
+import { authFetch } from '../lib/apiClient';
 import {
   Settings,
   Sun,
@@ -43,7 +44,7 @@ export const SettingsCenterView: React.FC = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/settings');
+      const res = await authFetch('/api/settings');
       if (res.ok) {
         const json = await res.json();
         if (json.data) {
@@ -60,7 +61,7 @@ export const SettingsCenterView: React.FC = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const res = await fetch('/api/settings', {
+      const res = await authFetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),

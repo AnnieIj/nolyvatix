@@ -4,6 +4,7 @@ import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
+import { authFetch } from '../lib/apiClient';
 import {
   Grid3X3,
   Plus,
@@ -72,7 +73,7 @@ export const DashboardBuilderView: React.FC = () => {
   const fetchDashboards = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/dashboards');
+      const res = await authFetch('/api/dashboards');
       if (res.ok) {
         const json = await res.json();
         setDashboards(json.data || []);
@@ -97,7 +98,7 @@ export const DashboardBuilderView: React.FC = () => {
   const handleTogglePin = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/dashboards/${id}/pin`, { method: 'POST' });
+      const res = await authFetch(`/api/dashboards/${id}/pin`, { method: 'POST' });
       if (res.ok) {
         fetchDashboards();
       }
@@ -109,7 +110,7 @@ export const DashboardBuilderView: React.FC = () => {
   const handleDuplicate = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/dashboards/${id}/duplicate`, { method: 'POST' });
+      const res = await authFetch(`/api/dashboards/${id}/duplicate`, { method: 'POST' });
       if (res.ok) {
         fetchDashboards();
       }
@@ -122,7 +123,7 @@ export const DashboardBuilderView: React.FC = () => {
     e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this dashboard?')) return;
     try {
-      const res = await fetch(`/api/dashboards/${id}`, { method: 'DELETE' });
+      const res = await authFetch(`/api/dashboards/${id}`, { method: 'DELETE' });
       if (res.ok) {
         fetchDashboards();
       }
@@ -134,7 +135,7 @@ export const DashboardBuilderView: React.FC = () => {
   const handleCreateDashboard = async () => {
     if (!newDashTitle.trim()) return;
     try {
-      const res = await fetch('/api/dashboards', {
+      const res = await authFetch('/api/dashboards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -161,7 +162,7 @@ export const DashboardBuilderView: React.FC = () => {
   const handleSaveTitle = async () => {
     if (!selectedDashboard) return;
     try {
-      const res = await fetch(`/api/dashboards/${selectedDashboard.id}`, {
+      const res = await authFetch(`/api/dashboards/${selectedDashboard.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: editedTitle }),
@@ -191,7 +192,7 @@ export const DashboardBuilderView: React.FC = () => {
     setAddWidgetModalOpen(false);
 
     try {
-      await fetch(`/api/dashboards/${selectedDashboard.id}`, {
+      await authFetch(`/api/dashboards/${selectedDashboard.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ widgets: updatedWidgets }),
@@ -208,7 +209,7 @@ export const DashboardBuilderView: React.FC = () => {
     setSelectedDashboard({ ...selectedDashboard, widgets: updatedWidgets });
 
     try {
-      await fetch(`/api/dashboards/${selectedDashboard.id}`, {
+      await authFetch(`/api/dashboards/${selectedDashboard.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ widgets: updatedWidgets }),
@@ -225,7 +226,7 @@ export const DashboardBuilderView: React.FC = () => {
     setSelectedDashboard({ ...selectedDashboard, widgets: updatedWidgets });
 
     try {
-      await fetch(`/api/dashboards/${selectedDashboard.id}`, {
+      await authFetch(`/api/dashboards/${selectedDashboard.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ widgets: updatedWidgets }),

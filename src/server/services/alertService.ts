@@ -1,7 +1,7 @@
 /**
  * Nolyvatix Data Engine - Alert & Notification Center Service
  * Custom triggers, multi-channel dispatch (Browser, Email, Webhooks, Slack, Discord)
- * Backed by Cloud SQL PostgreSQL with seamless in-memory fallback
+ * Backed by Cloud SQL PostgreSQL with tenant isolation and owner scoping
  */
 
 import { AlertRule, AlertChannel } from '../../types/index.ts';
@@ -12,7 +12,7 @@ import { UserDbRepository } from '../repositories/db/userDbRepository.ts';
 const logger = new Logger('AlertService');
 
 export class AlertService {
-  private inMemoryAlerts: Map<string, AlertRule> = new Map();
+  private inMemoryAlerts: Map<string, { alert: AlertRule; userId: number }> = new Map();
 
   constructor(
     private alertRepo: AlertDbRepository = new AlertDbRepository(),
@@ -65,38 +65,54 @@ export class AlertService {
       },
     ];
 
-    defaults.forEach((a) => this.inMemoryAlerts.set(a.id, a));
+    defaults.forEach((a) => this.inMemoryAlerts.set(a.id, { alert: a, userId: 1 }));
   }
 
-  async getAllAlerts(): Promise<AlertRule[]> {
+  private async resolveUserId(userId?: number): Promise<number> {
+    if (userId !== undefined && userId > 0) {
+      return userId;
+    }
+    const defaultUser = await this.userRepo.getOrCreateDefaultUser();
+    return defaultUser.id;
+  }
+
+  async getAllAlerts(userId?: number): Promise<AlertRule[]> {
+    const effectiveUserId = await this.resolveUserId(userId);
     try {
-      const user = await this.userRepo.getOrCreateDefaultUser();
-      const dbAlerts = await this.alertRepo.getAllAlerts(user.id);
+      const dbAlerts = await this.alertRepo.getAllAlerts(effectiveUserId);
       if (dbAlerts && dbAlerts.length > 0) {
         return dbAlerts;
       }
     } catch (e) {
       logger.error('Error querying alerts from DB, checking memory', e);
     }
-    return Array.from(this.inMemoryAlerts.values());
+    return Array.from(this.inMemoryAlerts.values())
+      .filter((entry) => entry.userId === effectiveUserId || entry.userId === 1)
+      .map((entry) => entry.alert);
   }
 
-  async getAlertById(id: string): Promise<AlertRule | null> {
+  async getAlertById(id: string, userId?: number): Promise<AlertRule | null> {
+    const effectiveUserId = await this.resolveUserId(userId);
     try {
-      const fromDb = await this.alertRepo.getAlertById(id);
+      const fromDb = await this.alertRepo.getAlertById(id, effectiveUserId);
       if (fromDb) return fromDb;
     } catch (e) {
       logger.error(`Error querying alert ${id} from DB, checking memory`, e);
     }
-    return this.inMemoryAlerts.get(id) || null;
+    const entry = this.inMemoryAlerts.get(id);
+    if (!entry) return null;
+    if (entry.userId === effectiveUserId || entry.userId === 1) {
+      return entry.alert;
+    }
+    return null;
   }
 
-  async createAlert(data: Partial<AlertRule>): Promise<AlertRule> {
+  async createAlert(data: Partial<AlertRule>, userId?: number): Promise<AlertRule> {
+    const effectiveUserId = await this.resolveUserId(userId);
     try {
-      const user = await this.userRepo.getOrCreateDefaultUser();
-      const created = await this.alertRepo.createAlert(user.id, data);
+      const created = await this.alertRepo.createAlert(effectiveUserId, data);
       if (created) {
-        this.inMemoryAlerts.set(created.id, created);
+        this.inMemoryAlerts.set(created.id, { alert: created, userId: effectiveUserId });
         return created;
       }
     } catch (e) {
@@ -115,38 +131,48 @@ export class AlertService {
       enabled: data.enabled ?? true,
     };
 
-    this.inMemoryAlerts.set(id, newAlert);
+    this.inMemoryAlerts.set(id, { alert: newAlert, userId: effectiveUserId });
     logger.info(`Created alert rule ${id}: ${newAlert.name}`);
     return newAlert;
   }
 
-  async updateAlert(id: string, updates: Partial<AlertRule>): Promise<AlertRule> {
+  async updateAlert(id: string, updates: Partial<AlertRule>, userId?: number): Promise<AlertRule> {
+    const effectiveUserId = await this.resolveUserId(userId);
     try {
-      const updatedInDb = await this.alertRepo.updateAlert(id, updates);
+      const updatedInDb = await this.alertRepo.updateAlert(id, effectiveUserId, updates);
       if (updatedInDb) {
-        this.inMemoryAlerts.set(id, updatedInDb);
+        this.inMemoryAlerts.set(id, { alert: updatedInDb, userId: effectiveUserId });
         return updatedInDb;
       }
     } catch (e) {
       logger.error(`Failed to update alert ${id} in DB`, e);
     }
 
-    const existing = this.inMemoryAlerts.get(id);
-    if (!existing) {
-      throw new Error(`Alert rule ${id} not found`);
+    const entry = this.inMemoryAlerts.get(id);
+    if (!entry || entry.userId !== effectiveUserId) {
+      throw new Error(`Alert rule ${id} not found or unauthorized`);
     }
 
-    const updated = { ...existing, ...updates };
-    this.inMemoryAlerts.set(id, updated);
+    const updated = { ...entry.alert, ...updates };
+    this.inMemoryAlerts.set(id, { alert: updated, userId: effectiveUserId });
     logger.info(`Updated alert rule in memory ${id}`);
     return updated;
   }
 
-  async deleteAlert(id: string): Promise<boolean> {
+  async deleteAlert(id: string, userId?: number): Promise<boolean> {
+    const effectiveUserId = await this.resolveUserId(userId);
     try {
-      await this.alertRepo.deleteAlert(id);
+      const deletedFromDb = await this.alertRepo.deleteAlert(id, effectiveUserId);
+      if (deletedFromDb) {
+        this.inMemoryAlerts.delete(id);
+        return true;
+      }
     } catch (e) {
       logger.error(`Failed to delete alert ${id} from DB`, e);
+    }
+    const entry = this.inMemoryAlerts.get(id);
+    if (!entry || entry.userId !== effectiveUserId) {
+      return false;
     }
     const deleted = this.inMemoryAlerts.delete(id);
     if (deleted) {
@@ -155,13 +181,14 @@ export class AlertService {
     return deleted;
   }
 
-  async testTriggerAlert(id: string): Promise<{ success: boolean; channel: AlertChannel; payload: any }> {
-    const alert = await this.getAlertById(id);
+  async testTriggerAlert(id: string, userId?: number): Promise<{ success: boolean; channel: AlertChannel; payload: any }> {
+    const effectiveUserId = await this.resolveUserId(userId);
+    const alert = await this.getAlertById(id, effectiveUserId);
     if (!alert) {
-      throw new Error(`Alert rule ${id} not found`);
+      throw new Error(`Alert rule ${id} not found or unauthorized`);
     }
 
-    const updated = await this.updateAlert(id, { lastTriggered: new Date().toISOString() }).catch(() => alert);
+    const updated = await this.updateAlert(id, { lastTriggered: new Date().toISOString() }, effectiveUserId).catch(() => alert);
 
     const payload = {
       alertId: updated.id,
